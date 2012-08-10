@@ -34,6 +34,11 @@ Below I present a sample of the kind of API I'm going for, at least for routing:
         end
       end
       
+      # The things you get for free by using Classes for Controllers (...that's at you Padrino)
+      def my_little_helper
+        # Do some crazy awesome stuff that no route can resist using.
+      end
+      
       self << {url: '/admin', priority: 10, target: My3rdPartyAdminApp}
       self << {url: '**', conditions: {maintenance_mode: true}, target: proc { |env|
         env['rack.response'].body << 'Maintenance underway, please be patient.'
