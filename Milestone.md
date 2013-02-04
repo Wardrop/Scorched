@@ -21,3 +21,5 @@ I'm considering breaking out some of these non-core features into their own gem.
 * Implement some form of view rendering
   * Add view helpers
     * Add helper to easily read and built HTTP query string's. Takes care of "?" and "&" logic, escaping, etc.
+    
+More things will be added to this list. I've just run myself out of time for now.
