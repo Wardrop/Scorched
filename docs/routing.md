@@ -26,4 +26,4 @@ String Patterns
 
 Regex Patterns
 --------------
-Regex patterns offer more power and flexibility than string patterns.
+Regex patterns offer more power and flexibility than string patterns (naturally). To be continued... (captures, named captures, etc).
