@@ -1,4 +1,4 @@
-scorched
+Scorched
 ========
 
 *Light-weight, DRY as a desert, web framework for Ruby. Inspired by Sinatra, this framework is my vision of the next evolutionary step in light-weight ruby web frameworks.*
