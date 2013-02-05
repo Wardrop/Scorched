@@ -35,14 +35,10 @@ Below I present a sample of the API as it currently stands:
         # Do what you want in here. Note, the second argument is the optional route priority.
       end
       
-      # Anonymous controllers allow for convenient route grouping to which filters and request/response defaults can be applied.
-      controller do
-        provides :json
-        
-        get '/articles/*?' do |page|
-          [
-            {title: 'Scorched Rocks', body: '...', created_at: '27/08/2012', created_by: 'Bob'}
-          ]
+      # Anonymous controllers allow for convenient route grouping to which filters and conditions can be applied
+      controller conditions: {content_type: :json} do
+        get '/articles/*' do |page|
+          {title: 'Scorched Rocks', body: '...', created_at: '27/08/2012', created_by: 'Bob'}
         end
         
         after do
