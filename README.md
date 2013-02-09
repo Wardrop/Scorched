@@ -70,4 +70,4 @@ That should hopefully give you an example of how the core of Scorched is shaping
 
 Development Progress
 --------------------
-Please refer to [Milestones.md](Milestone.md) for a breakdown of development progress.
+Please refer to [Milestones.md](Milestones.md) for a breakdown of development progress.
