@@ -6,17 +6,6 @@ module Scorched
       proc { |env| [200, {}, ['ok']] }
     end
     
-    default_config = app.config
-    default_conditions = app.conditions
-    
-    # Reset mapping, config and conditions after every test
-    after(:each) do
-      app.mappings.clear
-      app.filters.clear
-      app.config = default_config.clone
-      app.conditions = default_conditions.clone
-    end
-    
     it "contains a default set of configuration options" do
       app.config.should be_a(Hash)
       app.config.length.should > 0
@@ -30,21 +19,21 @@ module Scorched
     
     describe "basic route handling" do
       it "gracefully handles 404 errors" do
-        response = RT.get '/'
+        response = rt.get '/'
         response.status.should == 404
       end
     
       it "handles a root rack call correctly" do
         app << {url: '/$', target: generic_handler}
-        response = RT.get '/'
+        response = rt.get '/'
         response.status.should == 200
       end
     
       it "does not maintain state between requests" do
         app << {url: '/state', target: proc { |env| [200, {}, [@state = 1 + @state.to_i]] }}
-        response = RT.get '/state'
+        response = rt.get '/state'
         response.body.should == '1'
-        response = RT.get '/state'
+        response = rt.get '/state'
         response.body.should == '1'
       end
       
@@ -61,7 +50,7 @@ module Scorched
     describe "URL matching" do
       it 'always matches from the beginning of the URL' do
         app << {url: 'about', target: generic_handler}
-        response = RT.get '/about'
+        response = rt.get '/about'
         response.status.should == 404
       end
       
@@ -70,7 +59,7 @@ module Scorched
         app << {url: '/*', target: proc do |env|
           request = env['rack.request']; [200, {}, ['ok']]
         end}
-        response = RT.get '/about'
+        response = rt.get '/about'
         request.captures.should == ['about']
       end
       
@@ -80,16 +69,16 @@ module Scorched
         app << {url: '/*', target: proc do |env|
           request = env['rack.request']; [200, {}, ['ok']]
         end}
-        response = RT.get '/about'
+        response = rt.get '/about'
         request.captures.should == ['a']
       end 
       
       it "can be forced to match end of URL" do
         app << {url: '/about$', target: generic_handler}
-        response = RT.get '/about/us'
+        response = rt.get '/about/us'
         response.status.should == 404
         app << {url: '/about', target: generic_handler}
-        response = RT.get '/about/us'
+        response = rt.get '/about/us'
         response.status.should == 200
       end
       
@@ -98,7 +87,7 @@ module Scorched
         app << {url: '/anon/*/**', target: proc do |env|
           request = env['rack.request']; [200, {}, ['ok']]
         end}
-        response = RT.get '/anon/jeff/has/crabs'
+        response = rt.get '/anon/jeff/has/crabs'
         request.captures.should == ['jeff', 'has/crabs']
       end
       
@@ -107,7 +96,7 @@ module Scorched
         app << {url: '/anon/:name/*/::infliction', target: proc do |env|
           request = env['rack.request']; [200, {}, ['ok']]
         end}
-        response = RT.get '/anon/jeff/smith/has/crabs'
+        response = rt.get '/anon/jeff/smith/has/crabs'
         request.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
       
@@ -116,7 +105,7 @@ module Scorched
         app << {url: %r{/anon/([^/]+)/(.+)}, target: proc do |env|
           request = env['rack.request']; [200, {}, ['ok']]
         end}
-        response = RT.get '/anon/jeff/has/crabs'
+        response = rt.get '/anon/jeff/has/crabs'
         request.captures.should == ['jeff', 'has/crabs']
       end
       
@@ -125,7 +114,7 @@ module Scorched
         app << {url: %r{/anon/(?<name>[^/]+)/([^/]+)/(?<infliction>.+)}, target: proc do |env|
           request = env['rack.request']; [200, {}, ['ok']]
         end}
-        response = RT.get '/anon/jeff/smith/has/crabs'
+        response = rt.get '/anon/jeff/smith/has/crabs'
         request.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
       
@@ -134,47 +123,47 @@ module Scorched
         app << {url: '/', target: proc { |env| self.class.mappings.shift; [200, {}, ['two']] }}
         app << {url: '/', target: proc { |env| self.class.mappings.shift; [200, {}, ['three']] }}
         app << {url: '/', priority: 2, target: proc { |env| self.class.mappings.shift; [200, {}, ['one']] }}
-        RT.get('/').body.should == 'one'
-        RT.get('/').body.should == 'two'
-        RT.get('/').body.should == 'three'
-        RT.get('/').body.should == 'four'
+        rt.get('/').body.should == 'one'
+        rt.get('/').body.should == 'two'
+        rt.get('/').body.should == 'three'
+        rt.get('/').body.should == 'four'
       end
     end
     
     describe "conditions" do
       it "contains a default set of conditions" do
         app.conditions.should be_a(Hash)
-        app.conditions.should include(:methods)
+        app.conditions.should include(:methods, :media_type)
         app.conditions.each { |k,v| v.should be_a(Proc) }
       end
       
       it "executes route only if all conditions return true" do
         app << {url: '/', conditions: {methods: 'POST'}, target: generic_handler}
-        response = RT.get "/"
+        response = rt.get "/"
         response.status.should == 404
-        response = RT.post "/"
+        response = rt.post "/"
         response.status.should == 200
         
         app.conditions[:has_name] = proc { |name| @request.GET['name'] }
         app << {url: '/about', conditions: {methods: ['GET', 'POST'], has_name: 'Ronald'}, target: generic_handler}
-        response = RT.get "/about"
+        response = rt.get "/about"
         response.status.should == 404
-        response = RT.get "/about", name: 'Ronald'
+        response = rt.get "/about", name: 'Ronald'
         response.status.should == 200
       end
       
       it "raises exception when condition doesn't exist or is invalid" do
         app << {url: '/', conditions: {surprise_christmas_turkey: true}, target: generic_handler}
         expect {
-          RT.get "/"
+          rt.get "/"
         }.to raise_error(Scorched::Error)
       end
       
       it "falls through to next route when conditions are not met" do
         app << {url: '/', conditions: {methods: 'POST'}, target: proc { |env| [200, {}, ['post']] }}
         app << {url: '/', conditions: {methods: 'GET'}, target: proc { |env| [200, {}, ['get']] }}
-        RT.get("/").body.should == 'get'
-        RT.post("/").body.should == 'post'
+        rt.get("/").body.should == 'get'
+        rt.post("/").body.should == 'post'
       end
     end
     
@@ -183,22 +172,22 @@ module Scorched
         route_proc = app.route('/*', 2, methods: 'GET') { |capture| capture }
         mapping = app.mappings.first
         mapping.should == {url: mapping[:url], priority: 2, conditions: {methods: 'GET'}, target: route_proc}
-        RT.get('/about').body.should == 'about'
+        rt.get('/about').body.should == 'about'
       end
       
-      it "can provide a wrapped proc without mapping it" do
+      it "can provide a mapping proc without mapping it" do
         block = proc { |capture| capture }
         wrapped_block = app.route(&block)
         app.mappings.length.should == 0
         block.should_not == wrapped_block
         app << {url: '/*', target: wrapped_block}
-        RT.get('/turkey').body.should == 'turkey'
+        rt.get('/turkey').body.should == 'turkey'
       end
       
       it "provides a method for every HTTP method" do
         [:get, :post, :put, :delete, :options, :head, :patch].each do |m|
           app.send(m, '/say_cool') { 'cool' }
-          RT.send(m, '/say_cool').body.should == 'cool'
+          rt.send(m, '/say_cool').body.should == 'cool'
         end
       end
     end
@@ -208,7 +197,7 @@ module Scorched
         app.controller do
           get('/') { 'hello' }
         end
-        response = RT.get('/')
+        response = rt.get('/')
         response.status.should == 200
         response.body.should == 'hello'
       end
@@ -218,19 +207,19 @@ module Scorched
           route('/') { 'ok' }
         end
         app.mappings.first[:priority].should == -1
-        RT.get('/').status.should == 404
-        RT.post('/').body.should == 'ok'
+        rt.get('/').status.should == 404
+        rt.post('/').body.should == 'ok'
       end
       
       it "should ignore the already matched portions of the path" do
         app.controller url: '/article' do
           get('/*') { |title| title }
         end
-        RT.get('/article/hello-world').body.should == 'hello-world'
+        rt.get('/article/hello-world').body.should == 'hello-world'
       end
       
       it "inherits from parent class, or any other class" do
-        app.controller.superclass.should == Controller
+        app.controller.superclass.should == app
         app.controller(String).superclass.should == String
       end
     end
@@ -241,7 +230,7 @@ module Scorched
         app.get('/') { order << :action }
         app.after { order << :after }
         app.before { order << :before }
-        RT.get('/')
+        rt.get('/')
         order.should == [:before, :action, :after]
       end
       
@@ -252,7 +241,7 @@ module Scorched
         app.get('/') { route_instance = self }
         app.before { before_instance = self }
         app.after { after_instance = self }
-        RT.get('/')
+        rt.get('/')
         route_instance.should == before_instance
         route_instance.should == after_instance
       end
@@ -261,7 +250,7 @@ module Scorched
         counter = 0
         app.before { counter += 1 }
         app.after { counter += 1 }
-        RT.delete('/').status.should == 404
+        rt.delete('/').status.should == 404
         counter.should == 2
       end
       
@@ -269,9 +258,9 @@ module Scorched
         counter = 0
         app.before(methods: ['GET', 'PUT']) { counter += 1  }
         app.after(methods: ['GET', 'PUT']) { counter += 1  }
-        RT.post('/')
-        RT.get('/')
-        RT.put('/')
+        rt.post('/')
+        rt.get('/')
+        rt.put('/')
         counter.should == 4
       end
       
@@ -280,7 +269,7 @@ module Scorched
           order = []
           app.before { order << :outer }
           app.controller { before { order << :inner } }
-          RT.get('/')
+          rt.get('/')
           order.should == [:outer, :inner]
         end
         
@@ -288,9 +277,36 @@ module Scorched
           order = []
           app.after { order << :outer }
           app.controller { after { order << :inner } }
-          RT.get('/')
+          rt.get('/')
           order.should == [:inner, :outer]
         end
+      end
+    end
+    
+    describe "middleware" do
+      let(:app) do
+        Class.new(Scorched::Controller) do
+          self.middleware = { Scorched::SimpleCounter => true }
+          get '/$'do
+            @request.env['scorched.simple_counter']
+          end
+          controller url: '/sub_controller' do
+            get '/' do
+              @request.env['scorched.simple_counter']
+            end
+          end
+        end
+      end
+      
+      it "is only included once by default" do
+        rt.get('/').body.should == '1'
+        rt.get('/sub_controller').body.should == '1'
+      end
+      
+      it "can be explicitly included more than once in sub-controllers" do
+        app.mappings[-1][:target].middleware = { Scorched::SimpleCounter => true }
+        rt.get('/').body.should == '1'
+        rt.get('/sub_controller').body.should == '2'
       end
     end
     

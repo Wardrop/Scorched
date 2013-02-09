@@ -12,8 +12,27 @@ module Scorched
     }
     
     self.conditions = {
-      :methods => proc { |accepts| [*accepts].include?(@request.request_method) },
-      :media_types => proc { |types| [*types].any? { |type| @request.env['rack-accept.request'].media_type? type } }
+      :charset => proc { |charsets|
+        [*charsets].any? { |charset| @request.env['rack-accept.request'].charset? charset }
+      },
+      :encoding => proc { |encodings|
+        [*encodings].any? { |encoding| @request.env['rack-accept.request'].encoding? encoding }
+      },
+      :host => proc { |host| 
+        (Regexp === host) ? host =~ @request.host : host == @request.host 
+      },
+      :language => proc { |languages|
+        [*languages].any? { |language| @request.env['rack-accept.request'].language? language }
+      },
+      :media_type => proc { |types|
+        [*types].any? { |type| @request.env['rack-accept.request'].media_type? type }
+      },
+      :methods => proc { |accepts| 
+        [*accepts].include?(@request.request_method)
+      },
+      :user_agent => proc { |user_agent| 
+        (Regexp === user_agent) ? user_agent =~ @request.user_agent : user_agent == @request.user_agent 
+      },
     }
     
     self.middleware = {
@@ -39,7 +58,7 @@ module Scorched
           @builder = Rack::Builder.new
           middleware.select { |k,v| v == true }.keys.each do |mw|
             @builder.use(mw)
-            middleware[mw] = false
+            middleware[mw] = false # Prevents re-loading middleware in sub-controllers
           end
         end
         
@@ -67,7 +86,7 @@ module Scorched
       # used to determine the argument(s) given.
       def controller(*args, &block)
         mapping = (Hash === args.last) ? args.pop : {} 
-        parent = args.first || Controller
+        parent = args.first || self
         c = Class.new(parent, &block)
         self << {url: '/', target: c}.merge(mapping)
         c

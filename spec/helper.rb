@@ -1,21 +1,35 @@
 require 'rack/test'
 require_relative '../lib/scorched.rb'
 
-# RSpec.
+module Scorched
+  class SimpleCounter
+    def initialize(app)
+      @app = app       
+    end                
+
+    def call(env)
+      env['scorched.simple_counter'] ||= 0
+      env['scorched.simple_counter'] += 1
+      @app.call(env)   
+    end                
+  end
+end
+
+# We set our target application and rack test environment using let. This ensures tests are isolated, and allows us to
+# easily swap out our target application.
+module GlobalConfig
+  extend RSpec::SharedContext
+  let(:app) do
+    Class.new(Scorched::Controller)
+  end
+  
+  let(:rt) do
+    Rack::Test::Session.new(app)
+  end
+end
+
 RSpec.configure do |c|
   c.alias_example_to :they
   # c.backtrace_clean_patterns = []
+  c.include GlobalConfig
 end
-
-module Scorched
-  class TestApp < Controller; end
-  class ChildController < TestApp; end
-end
-
-def app
-  Scorched::TestApp
-end
-
-# To save ourselves from namespace pollution by using `include Rack::Test::Methods`, we use a constant for accessing
-# methods provided by Rack::Test.
-Scorched::RT = Class.new{ include Rack::Test::Methods }.new

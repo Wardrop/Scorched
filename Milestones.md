@@ -12,15 +12,21 @@ Completed
 * Implement before and after filters with proper chaining
 * Configuration inheritance between controllers - This has been implemented as the Options class.
   * Made Options class dynamic to allow conditions (and possibly more) to be inheritable.
+* Mechanism for including Rack middleware.
+* Add more route conditions e.g. content-type, language, user-agent, etc.
 
 Remaining
 ---------
-I'm considering breaking out some of these non-core features into their own gem. From there, you may include only the extra components you intend to use.
+Some of these remaining features may be broken out into a separate contrib library to keep the core lean and focused.
 
-* Mechanism for including Rack middleware. This is not just useful for developers, but required for the framework itself to leverage middleware.
-* Add more route conditions, mainly those based on with HTTP headers e.g. content-type, language, user-agent, etc.
-* Implement some form of view rendering
+* Implement some form of view rendering, most likely Tilt.
   * Add view helpers
-    * Add helper to easily read and built HTTP query string's. Takes care of "?" and "&" logic, escaping, etc.
+    * Add helper to easily read and build HTTP query string's. Takes care of "?" and "&" logic, escaping, etc. This is
+      intended to make link building easier.
+* Environment optimised defaults
+  * Production
+    * Rack::Protection
+  * Development
+    * Verbose logging to STDOUT
     
-More things will be added to this list. I've just run myself out of time for now.
+More things will be added to this list as they're thought of and considered.
