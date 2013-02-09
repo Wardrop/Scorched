@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift File.expand_path('../lib', __FILE__)
-require 'scorched' # Load scorched to inspect it for information, such as version.
+require 'scorched/version' # Load scorched to inspect it for information, such as version.
 
 Gem::Specification.new 'scorched', Scorched::VERSION do |s|
   s.description       = "Scorched description"
@@ -11,9 +11,8 @@ Gem::Specification.new 'scorched', Scorched::VERSION do |s|
   s.test_files        = Dir.glob('spec/**/*_spec.rb')
   s.rdoc_options      = %w[--line-numbers --inline-source --title Scorched --encoding=UTF-8]
 
-  s.add_dependency 'rack',            '~> 1.4'
-  s.add_dependency 'rack-protection', '~> 1.2'
+  s.add_dependency 'rack', '~> 1.4'
   s.add_dependency 'rack-accept', '~> 0.4.5'
   s.add_development_dependency 'rack-test', '~> 0.6'
-  s.add_development_dependency 'rspec',     '~> 2.9'
+  s.add_development_dependency 'rspec', '~> 2.9'
 end

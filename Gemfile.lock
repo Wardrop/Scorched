@@ -4,7 +4,6 @@ PATH
     scorched (0.1)
       rack (~> 1.4)
       rack-accept (~> 0.4.5)
-      rack-protection (~> 1.2)
 
 GEM
   remote: http://rubygems.org/
@@ -13,8 +12,6 @@ GEM
     rack (1.4.1)
     rack-accept (0.4.5)
       rack (>= 0.4)
-    rack-protection (1.2.0)
-      rack
     rack-test (0.6.2)
       rack (>= 1.0)
     rspec (2.12.0)

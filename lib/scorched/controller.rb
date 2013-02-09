@@ -2,6 +2,7 @@ module Scorched
   class Controller
     include Scorched::Options('config')
     include Scorched::Options('conditions')
+    include Scorched::Options('middleware')
     
     self.config = {
       # Applies only when the a forward slash directly follows the matched portion of the URL. If the pattern match includes
@@ -11,7 +12,12 @@ module Scorched
     }
     
     self.conditions = {
-      :methods => proc { |accepts| [*accepts].include?(@request.request_method) }
+      :methods => proc { |accepts| [*accepts].include?(@request.request_method) },
+      :media_types => proc { |types| [*types].any? { |type| @request.env['rack-accept.request'].media_type? type } }
+    }
+    
+    self.middleware = {
+      Rack::Accept => true
     }
     
     class << self
@@ -25,8 +31,20 @@ module Scorched
       end
       
       def call(env)
-        instance = self.new(env)
-        instance.action
+        app = lambda do |env|
+          instance = self.new(env)
+          instance.action
+        end
+        unless @builder 
+          @builder = Rack::Builder.new
+          middleware.select { |k,v| v == true }.keys.each do |mw|
+            @builder.use(mw)
+            middleware[mw] = false
+          end
+        end
+        
+        @builder.run(app)
+        @builder.call(env)
       end
       
       # A hash including the keys :url and :target. Optionally takes the following keys
