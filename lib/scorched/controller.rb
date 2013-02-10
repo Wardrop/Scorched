@@ -104,9 +104,11 @@ module Scorched
 
         unless args.empty?
           mapping = {}
+          mapping[:url] = compile(args.first, true)
           mapping[:conditions] = args.pop if Hash === args.last
           mapping[:priority] = args.pop if args.length == 2
-          self.map mapping.merge(url: compile(args.first), target: target)
+          mapping[:target] = target
+          self << mapping
         end
         
         target
@@ -134,13 +136,13 @@ module Scorched
     private
     
       # Parses and compiles the given URL string pattern into a regex if not already, returning the resulting regexp
-      # object. Accepts an optional block which is yielded to directly before the string is converted to a regex. The
-      # block must return a value compatible with _Regexp.new_.
-      def compile(url)
-        return nil if url.nil?
+      # object. Accepts an optional _match_to_end_ argument which will ensure the generated pattern matches to the end
+      # of the string.
+      def compile(url, match_to_end = false)
         return url if Regexp === url
+        raise Error, "Can't compile URL of type #{url.class}. Must be String or Regexp." unless String === url
         lazy = config[:match_lazily] ? '?' : ''
-        match_to_end = !!url.sub!(/\$$/, '')
+        match_to_end = !!url.sub!(/\$$/, '') || match_to_end
         pattern = url.split(%r{(\*{1,2}|(?<!\\):{1,2}[^/*$]+)}).each_slice(2).map { |unmatched, match|
           Regexp.escape(unmatched) << begin
             if %w{* **}.include? match
@@ -153,7 +155,7 @@ module Scorched
           end
         }.join
         pattern << '$' if match_to_end
-        Regexp.new(block_given? ? yield(pattern) : pattern)
+        Regexp.new(pattern)
       end
     end
     

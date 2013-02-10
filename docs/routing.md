@@ -19,7 +19,7 @@ String Patterns
 * `**` - Matches all characters including the forward slash.
 * `:param` - Same as `*` except the capture is named to whatever the string following the single-colon is.
 * `::param` - Same as `**` except the capture is named to whatever the string following the double-colon is.
-* `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For actions, this is
+* `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For routes, this is
   implied, so it should only be explicitly added if trying to match a dollar sign character. If added anywhere other
   than the end of the pattern, it will match the dollar sign character.
 

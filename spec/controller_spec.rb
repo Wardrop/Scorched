@@ -190,6 +190,12 @@ module Scorched
           rt.send(m, '/say_cool').body.should == 'cool'
         end
       end
+      
+      it "always matches to the end of the URL (implied $)" do
+        app.get('/') { 'awesome '}
+        rt.get('/dog').status.should == 404
+        rt.get('/').status.should == 200
+      end
     end
     
     describe "sub-controllers" do
