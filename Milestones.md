@@ -21,8 +21,11 @@ Some of these remaining features may be broken out into a separate contrib libra
 
 * Implement some form of view rendering, most likely Tilt.
   * Add view helpers
-    * Add helper to easily read and build HTTP query string's. Takes care of "?" and "&" logic, escaping, etc. This is
+    * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is
       intended to make link building easier.
+* Add static resource serving? e.g. public folder.
+* Provide default error pages
+* Means for catching and handling errors
 * Environment optimised defaults
   * Production
     * Rack::Protection

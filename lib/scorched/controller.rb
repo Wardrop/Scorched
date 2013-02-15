@@ -1,8 +1,10 @@
+require 'set'
+
 module Scorched
   class Controller
     include Scorched::Options('config')
     include Scorched::Options('conditions')
-    include Scorched::Options('middleware')
+    include Scorched::Collection('middleware')
     
     self.config = {
       # Applies only when the a forward slash directly follows the matched portion of the URL. If the pattern match includes
@@ -35,9 +37,7 @@ module Scorched
       },
     }
     
-    self.middleware = {
-      Rack::Accept => true
-    }
+    self.middleware << proc { use Rack::Accept }
     
     class << self
 
@@ -50,20 +50,20 @@ module Scorched
       end
       
       def call(env)
+        loaded = env['scorched.middleware'] ||= Set.new
         app = lambda do |env|
           instance = self.new(env)
           instance.action
         end
-        unless @builder 
-          @builder = Rack::Builder.new
-          middleware.select { |k,v| v == true }.keys.each do |mw|
-            @builder.use(mw)
-            middleware[mw] = false # Prevents re-loading middleware in sub-controllers
-          end
+
+        builder = Rack::Builder.new
+        middleware.reject{ |v| loaded.include? v }.each do |proc|
+          builder.instance_eval(&proc)
+          loaded << proc
         end
-        
-        @builder.run(app)
-        @builder.call(env)
+        # builder.use Rack::Static, :root => 'public'
+        builder.run(app)
+        builder.call(env)
       end
       
       # A hash including the keys :url and :target. Optionally takes the following keys

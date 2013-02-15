@@ -1,6 +1,6 @@
 module Scorched
   class << self
-    def Options(accessor_name)
+    def Collection(accessor_name)
       accessor_name = accessor_name.to_s
       m = Module.new
       m.class_eval <<-MOD
@@ -12,14 +12,14 @@ module Scorched
 
         module ClassMethods
           def #{accessor_name}(inherit = true)
-            @#{accessor_name} ||= {}
+            @#{accessor_name} ||= []
             if inherit
               if superclass.respond_to?(:#{accessor_name}) && superclass.respond_to?(:#{accessor_name}=)
-                retval = superclass.#{accessor_name}.merge(@#{accessor_name})
-                _options = @#{accessor_name}
-                retval.define_singleton_method(:[]=) do |key, value|
-                  _options[key] = value
-                  super(key, value)
+                retval = superclass.#{accessor_name} + (@#{accessor_name})
+                _collection = @#{accessor_name}
+                retval.define_singleton_method(:<<) do |value|
+                  _collection << value
+                  super(value)
                 end
                 return retval
               end
@@ -27,8 +27,8 @@ module Scorched
             @#{accessor_name}
           end
 
-          def #{accessor_name}=(hash)
-            @#{accessor_name} = hash
+          def #{accessor_name}=(array)
+            @#{accessor_name} = array
           end
         end
 
@@ -44,6 +44,4 @@ module Scorched
       m
     end
   end
-  
-  Options = Options('options')
 end

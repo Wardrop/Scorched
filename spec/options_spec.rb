@@ -39,7 +39,7 @@ module Scorched
         OptionsA.options[:dog].should == 'roof'
       end
 
-      it "sets options on the expected class regardless of inheritance" do
+      it "sets options on the expected target" do
         opts = OptionsB.options
         opts[:mouse] = 'squeak'
         opts[:mouse].should == 'squeak' # Ensure the 'merged' options also reflect the change.

@@ -292,7 +292,7 @@ module Scorched
     describe "middleware" do
       let(:app) do
         Class.new(Scorched::Controller) do
-          self.middleware = { Scorched::SimpleCounter => true }
+          self.middleware << proc { use Scorched::SimpleCounter }
           get '/$'do
             @request.env['scorched.simple_counter']
           end
@@ -310,7 +310,7 @@ module Scorched
       end
       
       it "can be explicitly included more than once in sub-controllers" do
-        app.mappings[-1][:target].middleware = { Scorched::SimpleCounter => true }
+        app.mappings[-1][:target].middleware << proc { use Scorched::SimpleCounter }
         rt.get('/').body.should == '1'
         rt.get('/sub_controller').body.should == '2'
       end
