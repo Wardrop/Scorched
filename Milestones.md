@@ -6,26 +6,28 @@ Completed
 * Basic request handling and routing
 * String and Regex URL matching, with capture support
 * Implement route conditions
-  * Added HTTP method condition which the route helpers depend on.
+  * Add HTTP method condition which the route helpers depend on.
 * Add route helpers
-* Support sub-controllers
+* Implemented support for sub-controllers
 * Implement before and after filters with proper chaining
 * Configuration inheritance between controllers - This has been implemented as the Options class.
   * Made Options class dynamic to allow conditions (and possibly more) to be inheritable.
 * Mechanism for including Rack middleware.
 * Add more route conditions e.g. content-type, language, user-agent, etc.
+* Provide means to `halt` request.
+  * Add redirect helping for halting and redirecting request
+* Mechanism for handling exceptions in routes and before/after filters.
+* Add static resource serving. E.g. public folder.
 
 Remaining
 ---------
 Some of these remaining features may be broken out into a separate contrib library to keep the core lean and focused.
 
-* Implement some form of view rendering, most likely Tilt.
+* Implement some form of view rendering, most likely using Tilt.
   * Add view helpers
     * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is
       intended to make link building easier.
-* Add static resource serving? e.g. public folder.
 * Provide default error pages
-* Means for catching and handling errors
 * Environment optimised defaults
   * Production
     * Rack::Protection

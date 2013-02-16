@@ -8,6 +8,7 @@ class MediaTypesExample < Scorched::Controller
       <div><strong>Name: </strong> John Falkon</div>
       <div><strong>Age: </strong> 39</div>
       <div><strong>Occupation: </strong> Carpet Cleaner</div>
+      #{@request.env['scorched.simple_counter']}
     HTML
   end
   

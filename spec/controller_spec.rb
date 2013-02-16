@@ -230,7 +230,7 @@ module Scorched
       end
     end
     
-    describe "filters" do
+    describe "before/after filters" do
       they "run directly before and after the target action" do
         order = []
         app.get('/') { order << :action }
@@ -289,11 +289,94 @@ module Scorched
       end
     end
     
+    describe "error filters" do
+      let(:app) do
+        Class.new(Scorched::Controller) do
+          route '/' do
+            raise StandardError
+          end
+        end
+      end
+      
+      they "catch exceptions" do
+        rt.get('/').status.should == 200
+        app.error { @response.status = 500 }
+        rt.get('/').status.should == 500
+      end
+      
+      they "receive the exception object as their first argument" do
+        error = nil
+        app.error { |e| error = e }
+        rt.get('/')
+        error.should be_a(StandardError)
+      end
+      
+      they "try the next handler if the previous handler returns false" do
+        handlers_called = 0
+        app.error { handlers_called += 1 }
+        app.error { handlers_called += 1 }
+        rt.get '/'
+        handlers_called.should == 1
+        
+        app.filters[:error].clear
+        handlers_called = 0
+        app.error { handlers_called += 1; false }
+        app.error { handlers_called += 1 }
+        rt.get '/'
+        handlers_called.should == 2
+      end
+      
+      they "still runs after filters if route error is handled" do
+        app.after { @response.status = 111 }
+        app.error { true }
+        rt.get('/').status.should == 111
+      end
+      
+      they "can handle exceptions in before/after filters" do
+        app.error { |e| @response.write e.class.name }
+        app.after { raise ArgumentError }
+        rt.get('/').body.should == 'StandardErrorArgumentError'
+      end
+      
+      they "only gets called once per error" do
+        times_called = 0
+        app.error { times_called += 1; false }
+        rt.get '/'
+        times_called.should == 1
+      end
+      
+      they "can optionally filter on one or more exception types" do
+        app.get('/arg_error') { raise ArgumentError }
+        
+        errors = []
+        app.error(StandardError, ArgumentError) { |e| errors << e.class }
+        rt.get '/'
+        rt.get '/arg_error'
+        errors.should == [StandardError, ArgumentError]
+        
+        app.filters[:error].clear
+        errors = []
+        app.error(ArgumentError) { |e| errors << e.class }
+        rt.get '/'
+        rt.get '/arg_error'
+        errors.should == [ArgumentError]
+      end
+      
+      they "can take an optional set of conditions" do
+        counter = 0
+        app.error(methods: ['GET', 'PUT']) { counter += 1  }
+        rt.post('/')
+        rt.get('/')
+        rt.put('/')
+        counter.should == 2
+      end
+    end
+    
     describe "middleware" do
       let(:app) do
         Class.new(Scorched::Controller) do
           self.middleware << proc { use Scorched::SimpleCounter }
-          get '/$'do
+          get '/'do
             @request.env['scorched.simple_counter']
           end
           controller url: '/sub_controller' do
@@ -313,6 +396,32 @@ module Scorched
         app.mappings[-1][:target].middleware << proc { use Scorched::SimpleCounter }
         rt.get('/').body.should == '1'
         rt.get('/sub_controller').body.should == '2'
+      end
+    end
+    
+    describe "halting" do
+      it "short circuits current request" do
+        has_run = false
+        app.get('/') { halt; has_run = true }
+        rt.get '/'
+        has_run.should be_false
+      end
+      
+      it "takes an optional status" do
+        app.get('/') { halt 401 }
+        rt.get('/').status.should == 401
+      end
+      
+      it "still processes filters" do
+        app.after { @response.status = 403 }
+        app.get('/') { halt }
+        rt.get('/').status.should == 403
+      end
+      
+      it "short circuits filters if halted within filter" do
+        app.before { halt }
+        app.after { @response.status = 403 }
+        rt.get('/').status.should == 200
       end
     end
     

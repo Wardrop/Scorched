@@ -1,4 +1,19 @@
 require 'set'
+require 'logger'
+
+module Scorched
+  class SimpleCounter
+    def initialize(app)
+      @app = app       
+    end                
+
+    def call(env)
+      env['scorched.simple_counter'] ||= 0
+      env['scorched.simple_counter'] += 1
+      @app.call(env)   
+    end                
+  end
+end
 
 module Scorched
   class Controller
@@ -9,8 +24,11 @@ module Scorched
     self.config = {
       # Applies only when the a forward slash directly follows the matched portion of the URL. If the pattern match includes
       # the trailing URL, or the unmatched portion of the URL does not begin with a forward slash, this setting has affect.
-      :strip_trailing_slash => true, #=> Redirects URL ending in forward slash to URL not ending in forward slash.
+      :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
       :match_lazily => false, # If true, compiles wildcards to match lazily.
+      :static => true, # Whether Scorched should serve static files. Set to false if web server or anything else is serving static files.
+      :static_dir => 'public',
+      :logger => Logger.new(STDOUT),
     }
     
     self.conditions = {
@@ -35,9 +53,15 @@ module Scorched
       :user_agent => proc { |user_agent| 
         (Regexp === user_agent) ? user_agent =~ @request.user_agent : user_agent == @request.user_agent 
       },
+      :status => proc { |statuses| 
+        [*statuses].include?(@response.status)
+      }
     }
     
     self.middleware << proc { use Rack::Accept }
+    self.middleware << proc do |this|
+      use Rack::Static, :root => this.config[:static_dir] if this.config[:static]
+    end
     
     class << self
 
@@ -58,10 +82,9 @@ module Scorched
 
         builder = Rack::Builder.new
         middleware.reject{ |v| loaded.include? v }.each do |proc|
-          builder.instance_eval(&proc)
+          builder.instance_exec(self, &proc)
           loaded << proc
         end
-        # builder.use Rack::Static, :root => 'public'
         builder.run(app)
         builder.call(env)
       end
@@ -123,13 +146,14 @@ module Scorched
         end
       end
       
-      def filter(type, conditions = {}, &block)
-         filters[type.to_sym] << {conditions: conditions, proc: block}
+      def filter(type, *args, &block)
+        conditions = (Hash === args.last) ? args.pop : {}
+        filters[type.to_sym] << {args: args, conditions: conditions, proc: block}
       end
       
-      ['before', 'after'].each do |type|
-        define_method(type) do |conditions = {}, &block|
-          filter(type, conditions, &block)
+      ['before', 'after', 'error'].each do |type|
+        define_method(type) do |*args, &block|
+          filter(type, *args, &block)
         end
       end
       
@@ -165,17 +189,36 @@ module Scorched
     end
     
     def action
-      match = matches(true).first
-      self.class.filters[:before].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
-      if match
-        @request.breadcrumb << match
-        # Proc's are executed in the context of this controller instance.
-        target = match[:mapping][:target]
-        @response.merge! (Proc === target) ? instance_exec(@request.env, &target) : target.call(@request.env)
-      else
-        @response.status = 404
+      inner_error = nil
+      rescue_block = proc do |e|
+        raise e unless self.class.filters[:error].any? do |f|
+          (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) && check_conditions?(f[:conditions]) && instance_exec(e, &f[:proc])
+        end
       end
-      self.class.filters[:after].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
+      
+      match = matches(true).first
+      begin
+        catch(:halt) do
+          self.class.filters[:before].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
+          if match
+            @request.breadcrumb << match
+            # Proc's are executed in the context of this controller instance.
+            target = match[:mapping][:target]
+            begin
+              catch(:halt) do
+                @response.merge! (Proc === target) ? instance_exec(@request.env, &target) : target.call(@request.env)
+              end
+            rescue => inner_error
+              rescue_block.call(inner_error)
+            end
+          else
+            @response.status = 404
+          end
+          self.class.filters[:after].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
+        end
+      rescue => outer_error
+        rescue_block.call(outer_error) unless outer_error == inner_error
+      end
       @response
     end
     
@@ -187,6 +230,7 @@ module Scorched
     # If _short_circuit_ is set to true, it stops matching at the first positive match, returning only a single match.
     def matches(short_circuit = false)
       to_match = @request.unmatched_path
+      # to_match.chomp!('/') if config[:strip_trailing_slash]
       matches = []
       self.class.mappings.each do |m|
         m[:url].match(to_match) do |match_data|
@@ -215,6 +259,16 @@ module Scorched
           instance_exec(v, &self.conditions[c])
         end
       end
+    end
+    
+    def redirect(url, status = 307)
+      @resonse['Location'] = url
+      halt(status)
+    end
+    
+    def halt(status = 200)
+      @response.status = status
+      throw :halt
     end
 
   end
