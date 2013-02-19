@@ -2,66 +2,56 @@ require 'set'
 require 'logger'
 
 module Scorched
-  class SimpleCounter
-    def initialize(app)
-      @app = app       
-    end                
-
-    def call(env)
-      env['scorched.simple_counter'] ||= 0
-      env['scorched.simple_counter'] += 1
-      @app.call(env)   
-    end                
-  end
-end
-
-module Scorched
   class Controller
     include Scorched::Options('config')
+    include Scorched::Options('view_config')
     include Scorched::Options('conditions')
     include Scorched::Collection('middleware')
     
-    self.config = {
-      # Applies only when the a forward slash directly follows the matched portion of the URL. If the pattern match includes
-      # the trailing URL, or the unmatched portion of the URL does not begin with a forward slash, this setting has affect.
+    config << {
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
       :match_lazily => false, # If true, compiles wildcards to match lazily.
-      :static => true, # Whether Scorched should serve static files. Set to false if web server or anything else is serving static files.
-      :static_dir => 'public',
-      :logger => Logger.new(STDOUT),
+      :static_dir => 'public', # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
+      :logger => Logger.new(STDOUT)
     }
     
-    self.conditions = {
-      :charset => proc { |charsets|
+    view_config << {
+      :dir => 'views', # The directory containing all the view templates.
+      :layout => false, # The default layout template to use. Set to false for no default layout.
+    }
+    
+    conditions << {
+      charset: proc { |charsets|
         [*charsets].any? { |charset| @request.env['rack-accept.request'].charset? charset }
       },
-      :encoding => proc { |encodings|
+      encoding: proc { |encodings|
         [*encodings].any? { |encoding| @request.env['rack-accept.request'].encoding? encoding }
       },
-      :host => proc { |host| 
+      host: proc { |host| 
         (Regexp === host) ? host =~ @request.host : host == @request.host 
       },
-      :language => proc { |languages|
+      language: proc { |languages|
         [*languages].any? { |language| @request.env['rack-accept.request'].language? language }
       },
-      :media_type => proc { |types|
+      media_type: proc { |types|
         [*types].any? { |type| @request.env['rack-accept.request'].media_type? type }
       },
-      :methods => proc { |accepts| 
+      methods: proc { |accepts| 
         [*accepts].include?(@request.request_method)
       },
-      :user_agent => proc { |user_agent| 
+      user_agent: proc { |user_agent| 
         (Regexp === user_agent) ? user_agent =~ @request.user_agent : user_agent == @request.user_agent 
       },
-      :status => proc { |statuses| 
+      status: proc { |statuses| 
         [*statuses].include?(@response.status)
-      }
+      },
     }
     
-    self.middleware << proc { use Rack::Accept }
-    self.middleware << proc do |this|
-      use Rack::Static, :root => this.config[:static_dir] if this.config[:static]
-    end
+    self.middleware << proc { |this|
+      use Rack::Accept
+      use Rack::Static, :root => this.config[:static_dir] if this.config[:static_dir]
+      use Rack::Logger, this.config[:logger] if this.config[:logger]
+    }
     
     class << self
 
@@ -81,7 +71,7 @@ module Scorched
         end
 
         builder = Rack::Builder.new
-        middleware.reject{ |v| loaded.include? v }.each do |proc|
+        middleware(:inherit).reject{ |v| loaded.include? v }.each do |proc|
           builder.instance_exec(self, &proc)
           loaded << proc
         end
@@ -151,6 +141,7 @@ module Scorched
         filters[type.to_sym] << {args: args, conditions: conditions, proc: block}
       end
       
+      # A bit of syntactic sugar for #filter.
       ['before', 'after', 'error'].each do |type|
         define_method(type) do |*args, &block|
           filter(type, *args, &block)
@@ -199,6 +190,12 @@ module Scorched
       match = matches(true).first
       begin
         catch(:halt) do
+          if config[:strip_trailing_slash] == :redirect && @request.path[-1] == '/'
+            redirect(@request.path.chomp('/'))
+          elsif config[:strip_trailing_slash] == :ignore
+            @request.path.chomp('/')
+          end
+          
           self.class.filters[:before].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
           if match
             @request.breadcrumb << match
@@ -230,7 +227,6 @@ module Scorched
     # If _short_circuit_ is set to true, it stops matching at the first positive match, returning only a single match.
     def matches(short_circuit = false)
       to_match = @request.unmatched_path
-      # to_match.chomp!('/') if config[:strip_trailing_slash]
       matches = []
       self.class.mappings.each do |m|
         m[:url].match(to_match) do |match_data|
@@ -262,7 +258,7 @@ module Scorched
     end
     
     def redirect(url, status = 307)
-      @resonse['Location'] = url
+      @response['Location'] = url
       halt(status)
     end
     

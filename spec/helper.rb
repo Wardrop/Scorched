@@ -15,6 +15,8 @@ module Scorched
   end
 end
 
+Scorched::Controller.config[:strip_trailing_slash] = false
+
 # We set our target application and rack test environment using let. This ensures tests are isolated, and allows us to
 # easily swap out our target application.
 module GlobalConfig

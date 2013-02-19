@@ -7,12 +7,12 @@ module Scorched
     end
     
     it "contains a default set of configuration options" do
-      app.config.should be_a(Hash)
+      app.config.should be_a(Options)
       app.config.length.should > 0
     end
     
     it "contains a set of default conditions" do
-      app.conditions.should be_a(Hash)
+      app.conditions.should be_a(Options)
       app.conditions.length.should > 0
       app.conditions[:methods].should be_a(Proc)
     end
@@ -132,7 +132,7 @@ module Scorched
     
     describe "conditions" do
       it "contains a default set of conditions" do
-        app.conditions.should be_a(Hash)
+        app.conditions.should be_a(Options)
         app.conditions.should include(:methods, :media_type)
         app.conditions.each { |k,v| v.should be_a(Proc) }
       end

@@ -23,6 +23,8 @@ Remaining
 ---------
 Some of these remaining features may be broken out into a separate contrib library to keep the core lean and focused.
 
+* Make behave like middleware. Inheritable, but are only executed once. 
+* Add specs for each configuration option.
 * Implement some form of view rendering, most likely using Tilt.
   * Add view helpers
     * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is

@@ -12,38 +12,33 @@ end
 
 module Scorched
   describe :Collection do
-    context "default" do
-      it "defaults to an empty array" do
-        CollectionA.middleware.should == []
-      end
+    it "defaults to an empty set" do
+      CollectionA.middleware.should == Set.new
+    end
+  
+    it "can be set to a given set" do
+      my_set = Set.new(['horse', 'cat', 'dog'])
+      CollectionA.middleware = my_set
+      CollectionA.middleware.should == my_set
+    end
     
-      it "can be set to a given hash" do
-        my_array = ['horse', 'cat', 'dog']
-        CollectionA.middleware = my_array
-        CollectionA.middleware.should == my_array
-      end
-    
-      it "inherits options of superclass by default" do
-        CollectionB.middleware.should == ['horse', 'cat', 'dog']
-        CollectionB.middleware(false).should == []
-      end
-    
-      it "inherits recursively" do
-        CollectionC.middleware.should == CollectionA.middleware
-      end
-    
-      it "overrides parent, without modifying it" do
-        CollectionB.middleware(false) << 'rabbit'
-        CollectionB.middleware.should include('rabbit')
-        CollectionA.middleware.should_not include('rabbit')
-      end
-
-      it "pushes new values onto the expected target" do
-        collection = CollectionB.middleware
-        collection << 'squeak'
-        collection.should include('squeak') # Ensure the 'merged' options also reflect the change.
-        CollectionA.middleware.should_not include('squeak')
-      end
+    it "automatically converts arrays to sets" do
+      array = ['horse', 'cat', 'dog']
+      CollectionA.middleware = array
+      CollectionA.middleware.should == array.to_set
+    end
+  
+    it "can recursively inherit options of superclass" do
+      CollectionB.middleware(true).should == Set.new(['horse', 'cat', 'dog'])
+      CollectionC.superclass.middleware(true)
+      CollectionC.middleware(true).should == CollectionA.middleware
+      CollectionB.middleware.should == Set.new
+    end
+  
+    it "never modifies the parent" do
+      CollectionB.middleware << 'rabbit'
+      CollectionB.middleware.should include('rabbit')
+      CollectionA.middleware.should_not include('rabbit')
     end
   end
 end
