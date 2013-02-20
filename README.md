@@ -19,7 +19,7 @@ Perhaps another error (or area of sogginess, if you will) has been a lack of con
 
 Design Philosophy
 -----------------
-Scorched has a relatively simple design philosophy. The main philosophy is to keep Scorched lean and generic. Scorched tries not to be opinionated. The idea is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
+Scorched has a relatively simple design philosophy. The main objective is to keep Scorched lean and generic. Scorched tries not to be opinionated. The general idea behind Scorched is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
 
 A key requirement for achieving _lean_ and _generic_ is to make Scorched easy to build on top of; to allow developers to tailor it to each of their projects with minimal overhead.
 
