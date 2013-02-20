@@ -5,8 +5,7 @@ Scorched
 
 Scorched honours the patrons of the past. It's not a complete reinvention of the lightweight web framework, but rather what I hope is an evolutionary enhancement. Most of the concepts are carried forward from predecessors. Scorched merely enhances those concepts in an attempt to extract their full potential, as well as offering up to scrutiny some entirely new idioms. All with the intention to make developing lightweight web apps in Ruby even more enjoyable.
 
-The named Scorched was the result of a 5 minute brainstorm. I summarised the main intention of the project as to DRY-up
-what its predecessors left moist. The name Scorched was therefore born.
+The name 'Scorched' is inspired by the main goal of the project, which is to DRY-up what the likes of Sinatra and Padrino left moist.
 
 
 The Errors of Our Past (aka. Areas of Moisty-ness)
@@ -15,12 +14,18 @@ I think the biggest mistake made by the predecessors of Scorched such as Sinatra
 of the class. The consequences of this made for some awkwardness. Helpers are a classical reinvention of what
 classes and modules were already made to solve. Scorched implements Controllers as Classes, which in addition to having their own DSL, allow defining and calling traditional class methods. Allowing developers to implement helpers and other common functionality as proper methods not only makes them more predictable and familiar, but of course allow such helpers to be inheritable via plain-old Class inheritance.
 
-Perhaps another error (or area of sogginess, if you will) has been a lack of consideration for the hierarchical nature of websites, and the fact that sub-directories are often expected inherit attributes of their parents. Scorched supports sub-controllers to any arbitrary depth, with each controllers filters and route conditions applied along the way. This can assist many areas of web development, including security, restful interfaces, and interchangeable output formats.
+Perhaps another error (or area of sogginess, if you will) has been a lack of consideration for the hierarchical nature of websites, and the fact that sub-directories are often expecteded to inherit attributes of their parents. Scorched supports sub-controllers to any arbitrary depth, with each controllers filters and route conditions applied along the way. This can assist many areas of web development, including security, restful interfaces, and interchangeable output formats.
+
+
+Design Philosophy
+-----------------
+Scorched has a relatively simple design philosophy. The main philosophy is to keep Scorched lean and generic. Scorched tries not to be opinionated. The idea is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
+
+A key requirement for achieving _lean_ and _generic_ is to make Scorched easy to build on top of; to allow developers to tailor it to each of their projects with minimal overhead.
 
 
 First Impressions
 -----------------
-
 Below I present a sample of the API as it currently stands:
 
     class MyApp < Scorched::Controller
