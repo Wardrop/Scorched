@@ -4,7 +4,7 @@ module Scorched
     extend DynamicDelegate
     alias_each(Hash.instance_methods(false)) { |m| "_#{m}" }
     delegate 'to_hash', *Hash.instance_methods(false).reject { |m|
-      [:[]=, :store, :delete, :delete_if, :replace, :shift, :inspect].include? m
+      [:[]=, :clear, :delete, :delete_if, :inspect, :replace, :shift, :store].include? m
     }
     
     alias_method :<<, :replace

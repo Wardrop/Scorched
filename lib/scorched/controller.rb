@@ -7,6 +7,9 @@ module Scorched
     include Scorched::Options('view_config')
     include Scorched::Options('conditions')
     include Scorched::Collection('middleware')
+    include Scorched::Collection('before_filters')
+    include Scorched::Collection('after_filters')
+    include Scorched::Collection('error_filters')
     
     config << {
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
@@ -60,7 +63,7 @@ module Scorched
       end
       
       def filters
-        @filters ||= Hash.new { |h,k| h[k] = [] }
+        @filters ||= {before: before_filters, after: after_filters, error: error_filters}
       end
       
       def call(env)
@@ -174,6 +177,10 @@ module Scorched
       end
     end
     
+    def method_missing(method, *args, &block)
+      (self.class.respond_to? method) ? self.class.__send__(method, *args, &block) : super
+    end
+    
     def initialize(env)
       @request = env['rack.request'] ||= Request.new(env)
       @response = env['rack.response'] ||= Response.new
@@ -182,7 +189,7 @@ module Scorched
     def action
       inner_error = nil
       rescue_block = proc do |e|
-        raise e unless self.class.filters[:error].any? do |f|
+        raise e unless filters[:error].any? do |f|
           (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) && check_conditions?(f[:conditions]) && instance_exec(e, &f[:proc])
         end
       end
@@ -196,7 +203,7 @@ module Scorched
             @request.path.chomp('/')
           end
           
-          self.class.filters[:before].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
+          run_filters(:before)
           if match
             @request.breadcrumb << match
             # Proc's are executed in the context of this controller instance.
@@ -211,7 +218,7 @@ module Scorched
           else
             @response.status = 404
           end
-          self.class.filters[:after].each { |f| instance_exec(&f[:proc]) if check_conditions?(f[:conditions]) }
+          run_filters(:after)
         end
       rescue => outer_error
         rescue_block.call(outer_error) unless outer_error == inner_error
@@ -228,7 +235,7 @@ module Scorched
     def matches(short_circuit = false)
       to_match = @request.unmatched_path
       matches = []
-      self.class.mappings.each do |m|
+      mappings.each do |m|
         m[:url].match(to_match) do |match_data|
           if match_data.pre_match == ''
             if check_conditions?(m[:conditions])
@@ -268,6 +275,22 @@ module Scorched
       @response.status = status
       throw :halt
     end
-
+    
+    # Syntactic shorthand for accessing Rack env hash.
+    def env
+      @request.env
+    end
+    
+  private
+  
+    def run_filters(type)
+      tracker = env['scorched.filters'] ||= {before: Set.new, after: Set.new}
+      filters[type].reject{ |f| tracker[type].include? f }.each do |f|
+        if check_conditions?(f[:conditions])
+          tracker[type] << f
+          instance_exec(&f[:proc])
+        end
+      end
+    end
   end
 end

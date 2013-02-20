@@ -6,7 +6,7 @@ module Scorched
     extend DynamicDelegate
     alias_each(Set.instance_methods(false)) { |m| "_#{m}" }
     delegate 'to_set', *Set.instance_methods(false).reject { |m|
-      [:<<, :add, :add?, :delete, :delete?, :delete_if, :merge, :replace, :subtract, :inspect].include? m
+      [:<<, :add, :add?, :clear, :delete, :delete?, :delete_if, :inspect, :merge, :replace, :subtract].include? m
     }
     
     # sets parent Collection object and returns self
@@ -16,7 +16,12 @@ module Scorched
     end
     
     def to_set(inherit = true)
-      ((inherit && (Set === @parent || Array === @parent)) ? Set.new(@parent.to_set) : Set.new).merge(self._to_a)
+      if inherit && (Set === @parent || Array === @parent)
+        # An important attribute of a Scorched::Collection is that the merged set is ordered from inner to outer.
+        Set.new.merge(self._to_a).merge(@parent.to_set)
+      else
+        Set.new.merge(self._to_a)
+      end
     end
     
     def to_a(inherit = true)

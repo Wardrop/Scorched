@@ -4,7 +4,7 @@ An easy way to serve multiple content-types:
 
   class App < Scorched::Controller
     def view(view = nil)
-      view ? @request.env['app.view'] = view : @request.env['app.view']
+      view ? env['app.view'] = view : env['app.view']
     end
   
     after do

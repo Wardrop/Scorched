@@ -36,6 +36,7 @@ module Scorched
     it "provides access to a copy of internal hash" do
       OptionsB.colours.to_hash(false).should == {car: 'blue'}
       OptionsC.colours.to_hash(false).should == {}
+      OptionsC.colours.to_hash(false).object_id.should_not == OptionsC.colours.object_id
     end
   end
 end

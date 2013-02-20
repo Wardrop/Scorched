@@ -271,6 +271,25 @@ module Scorched
       end
       
       describe "nesting" do
+        example "filters inherit but only run once" do
+          before_counter, after_counter = 0, 0
+          app.before { before_counter += 1  }
+          app.after { after_counter += 1  }
+          subcontroller = app.controller { get('/') { 'wow' } }
+          subcontroller.filters[:before].should == app.filters[:before]
+          subcontroller.filters[:after].should == app.filters[:after]
+          
+          rt.get('/')
+          before_counter.should == 1
+          after_counter.should == 1
+          
+          # Hitting the subcontroller directly should yield the same results.
+          before_counter, after_counter = 0, 0
+          Rack::Test::Session.new(subcontroller).get('/')
+          before_counter.should == 1
+          after_counter.should == 1
+        end
+        
         example "before filters run from outermost to inner" do
           order = []
           app.before { order << :outer }
