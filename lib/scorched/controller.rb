@@ -71,7 +71,7 @@ module Scorched
         end
 
         builder = Rack::Builder.new
-        middleware(:inherit).reject{ |v| loaded.include? v }.each do |proc|
+        middleware.reject{ |v| loaded.include? v }.each do |proc|
           builder.instance_exec(self, &proc)
           loaded << proc
         end
@@ -250,11 +250,13 @@ module Scorched
       if !conds
         true
       else
-        conds.all? do |c,v|
-          raise Error, "The condition `#{c}` either does not exist, or is not a Proc object" unless Proc === self.conditions[c]
-          instance_exec(v, &self.conditions[c])
-        end
+        conds.all? { |c,v| check_condition?(c, v) }
       end
+    end
+    
+    def check_condition?(c, v)
+      raise Error, "The condition `#{c}` either does not exist, or is not a Proc object" unless Proc === self.conditions[c]
+      instance_exec(v, &self.conditions[c])
     end
     
     def redirect(url, status = 307)

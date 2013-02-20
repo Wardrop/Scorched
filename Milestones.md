@@ -23,7 +23,8 @@ Remaining
 ---------
 Some of these remaining features may be broken out into a separate contrib library to keep the core lean and focused.
 
-* Make behave like middleware. Inheritable, but are only executed once. 
+* Make filters behave like middleware. Inheritable, but are only executed once. 
+* Give them priority support like routes.
 * Add specs for each configuration option.
 * Implement some form of view rendering, most likely using Tilt.
   * Add view helpers

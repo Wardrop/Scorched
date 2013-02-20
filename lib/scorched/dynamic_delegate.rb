@@ -12,5 +12,11 @@ module Scorched
         CODE
       end
     end
+    
+    def alias_each(methods)
+      methods.each do |m|
+        alias_method yield(m), m
+      end
+    end
   end
 end

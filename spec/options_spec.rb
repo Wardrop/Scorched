@@ -1,7 +1,7 @@
 require_relative './helper.rb'
 
 class OptionsA
-  include Scorched::Options('conditions')
+  include Scorched::Options('colours')
 end
 
 class OptionsB < OptionsA
@@ -13,30 +13,29 @@ end
 module Scorched
   describe Options do
     it "defaults to an empty hash" do
-      OptionsA.conditions.should be_empty
+      OptionsA.colours.should be_empty
     end
 
     it "can be set to a given hash" do
       my_hash = {car: 'red', house: 'cream'}
-      OptionsA.conditions << my_hash
-      OptionsA.conditions.should == my_hash
+      OptionsA.colours.replace my_hash
+      OptionsA.colours.should == my_hash
     end
 
-    it "inherits recursively from parents" do
-      OptionsC.conditions.should == {car: 'red', house: 'cream'}
-      OptionsC.conditions[:car].should == 'red'
-      OptionsC.conditions.local_hash.should == {}
+    it "recursively inherits from parents by default" do
+      OptionsB.colours.should == {car: 'red', house: 'cream'}
+      OptionsC.colours.should == {car: 'red', house: 'cream'}
     end
 
-    it "overrides parent, but does not overwrite" do
-      OptionsB.conditions[:car] = 'blue'
-      OptionsB.conditions[:car].should == 'blue'
-      OptionsA.conditions[:car].should == 'red'
+    it "allows values to be overridden without modifying the parent" do
+      OptionsB.colours[:car] = 'blue'
+      OptionsB.colours[:car].should == 'blue'
+      OptionsA.colours[:car].should == 'red'
     end
-
-    it "sets options on the expected class regardless of inheritance" do
-      OptionsB.conditions[:boat] = 'white'
-      OptionsA.conditions[:boat].should be_nil
+    
+    it "provides access to a copy of internal hash" do
+      OptionsB.colours.to_hash(false).should == {car: 'blue'}
+      OptionsC.colours.to_hash(false).should == {}
     end
   end
 end
