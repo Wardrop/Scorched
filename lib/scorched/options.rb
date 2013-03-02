@@ -4,7 +4,7 @@ module Scorched
     extend DynamicDelegate
     alias_each(Hash.instance_methods(false)) { |m| "_#{m}" }
     delegate 'to_hash', *Hash.instance_methods(false).reject { |m|
-      [:[]=, :clear, :delete, :delete_if, :inspect, :replace, :shift, :store].include? m
+      [:[]=, :clear, :delete, :delete_if, :merge!, :replace, :shift, :store].include? m
     }
     
     alias_method :<<, :replace
@@ -17,6 +17,10 @@ module Scorched
     
     def to_hash(inherit = true)
       (inherit && Hash === @parent) ? @parent.to_hash.merge(self) : {}.merge(self)
+    end
+    
+    def inspect
+      "#<#{self.class}: local#{_inspect}, merged#{to_hash.inspect}>"
     end
   end
   
@@ -47,3 +51,4 @@ module Scorched
     end
   end
 end
+

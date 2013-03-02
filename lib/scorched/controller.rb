@@ -1,8 +1,6 @@
-require 'set'
-require 'logger'
-
 module Scorched
   class Controller
+    include ViewHelpers
     include Scorched::Options('config')
     include Scorched::Options('view_config')
     include Scorched::Options('conditions')
@@ -13,46 +11,48 @@ module Scorched
     
     config << {
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
-      :match_lazily => false, # If true, compiles wildcards to match lazily.
       :static_dir => 'public', # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
       :logger => Logger.new(STDOUT)
     }
     
     view_config << {
-      :dir => 'views', # The directory containing all the view templates.
-      :layout => false, # The default layout template to use. Set to false for no default layout.
+      :dir => 'views', # The directory containing all the view templates, relative to the application root.
+      :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
+      :engine => :erb
     }
     
     conditions << {
       charset: proc { |charsets|
-        [*charsets].any? { |charset| @request.env['rack-accept.request'].charset? charset }
+        [*charsets].any? { |charset| request.env['rack-accept.request'].charset? charset }
       },
       encoding: proc { |encodings|
-        [*encodings].any? { |encoding| @request.env['rack-accept.request'].encoding? encoding }
+        [*encodings].any? { |encoding| request.env['rack-accept.request'].encoding? encoding }
       },
       host: proc { |host| 
-        (Regexp === host) ? host =~ @request.host : host == @request.host 
+        (Regexp === host) ? host =~ request.host : host == request.host 
       },
       language: proc { |languages|
-        [*languages].any? { |language| @request.env['rack-accept.request'].language? language }
+        [*languages].any? { |language| request.env['rack-accept.request'].language? language }
       },
       media_type: proc { |types|
-        [*types].any? { |type| @request.env['rack-accept.request'].media_type? type }
+        [*types].any? { |type| request.env['rack-accept.request'].media_type? type }
       },
       methods: proc { |accepts| 
-        [*accepts].include?(@request.request_method)
+        [*accepts].include?(request.request_method)
       },
       user_agent: proc { |user_agent| 
-        (Regexp === user_agent) ? user_agent =~ @request.user_agent : user_agent == @request.user_agent 
+        (Regexp === user_agent) ? user_agent =~ request.user_agent : user_agent == request.user_agent 
       },
       status: proc { |statuses| 
-        [*statuses].include?(@response.status)
+        [*statuses].include?(response.status)
       },
     }
     
-    self.middleware << proc { |this|
+    middleware << proc { |this|
+      use Rack::Head
+      use Rack::MethodOverride
       use Rack::Accept
-      use Rack::Static, :root => this.config[:static_dir] if this.config[:static_dir]
+      use Scorched::Static, :dir => this.config[:static_dir] if this.config[:static_dir]
       use Rack::Logger, this.config[:logger] if this.config[:logger]
     }
     
@@ -82,65 +82,61 @@ module Scorched
         builder.call(env)
       end
       
-      # A hash including the keys :url and :target. Optionally takes the following keys
+      # Generates and assigns mapping hash from the given arguments.
+      #
+      # Accepts the following keyword arguments:
+      #   :url - The url pattern to match on. Required.
+      #   :target - A proc to execute, or some other object that responds to #call. Required.
       #   :priority - Negative or positive integer for giving a priority to the mapped item.
       #   :conditions - A hash of condition:value pairs
-      # Raises a Scorched::Error if invalid hash is given.
-      def map(mapping)
-        unless Hash === mapping && [:url, :target].all? { |k| mapping.keys.include? k }
-          raise Scorched::Error, "Invalid mapping hash given: #{mapping}"
-        end
-        mapping[:url] = compile(mapping[:url])
-        mapping[:priority] = mapping[:priority].to_i
-        insert_idx = mappings.take_while { |v| mapping[:priority] <= v[:priority]  }.length
-        mappings.insert(insert_idx, mapping)
+      # Raises ArgumentError if required key values are not provided.
+      def map(url: nil, priority: nil, conditions: {}, target: nil)
+        raise ArgumentError, "Mapping must specify url pattern and target" unless url && target
+        priority = priority.to_i
+        insert_pos = mappings.take_while { |v| priority <= v[:priority]  }.length
+        mappings.insert(insert_pos, {
+          url: compile(url),
+          priority: priority,
+          conditions: conditions,
+          target: target
+        })
       end
       alias :<< :map
       
-      # Takes a mandatory block, and three optional arguments: a url, parent class of the anonymous controller and a
-      # mapping hash. Any of the arguments can be ommited. As long as they're in the right order, the object type is
-      # used to determine the argument(s) given.
-      def controller(*args, &block)
-        mapping = (Hash === args.last) ? args.pop : {} 
-        parent = args.first || self
-        c = Class.new(parent, &block)
+      # Creates a new controller as a sub-class of self (by default), mapping it to self using the provided mapping
+      # hash if one is provided. Returns the new anonymous controller class.
+      #
+      # Takes two optional arguments and a block: a parent class from which the generated controller class inherits
+      # from, a mapping hash to automatically map the new controller, and of course a block which defines the
+      # controller class.
+      #
+      # It's worth noting, however obvious, that the resulting class will only be a controller if the parent class is
+      # (or inherits from) a Scorched::Controller.
+      def controller(parent_class = self, **mapping, &block)
+        c = Class.new(parent_class, &block)
         self << {url: '/', target: c}.merge(mapping)
         c
       end
       
-      # Returns a new route proc from the given block.
-      # If arguments are given, they are used to map the route to the current controller.
-      # First argument is the URL to map to. Second argument is an optional priority. Last argument is an optional hash
-      # of options.
-      def route(*args, &block)
-        target = proc do |env|
+      # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
+      def route(url = nil, priority = nil, **conditions, &block)
+        target = lambda do |env|
           env['rack.response'].body << instance_exec(*env['rack.request'].captures, &block)
           env['rack.response']
         end
-
-        unless args.empty?
-          mapping = {}
-          mapping[:url] = compile(args.first, true)
-          mapping[:conditions] = args.pop if Hash === args.last
-          mapping[:priority] = args.pop if args.length == 2
-          mapping[:target] = target
-          self << mapping
-        end
-        
+        self << {url: compile(url, true), priority: priority, conditions: conditions, target: target} if url
         target
       end
 
       ['get', 'post', 'put', 'delete', 'head', 'options', 'patch'].each do |method|
         methods = (method == 'get') ? ['GET', 'HEAD'] : [method.upcase]
-        define_method(method) do |*args, &block|
-          args << {} unless Hash === args.last
-          args.last.merge!(methods: methods)
-          route(*args, &block)
+        define_method(method) do |*args, **conditions, &block|
+          conditions.merge!(methods: methods)
+          route(*args, **conditions, &block)
         end
       end
       
-      def filter(type, *args, &block)
-        conditions = (Hash === args.last) ? args.pop : {}
+      def filter(type, *args, **conditions, &block)
         filters[type.to_sym] << {args: args, conditions: conditions, proc: block}
       end
       
@@ -159,14 +155,13 @@ module Scorched
       def compile(url, match_to_end = false)
         return url if Regexp === url
         raise Error, "Can't compile URL of type #{url.class}. Must be String or Regexp." unless String === url
-        lazy = config[:match_lazily] ? '?' : ''
         match_to_end = !!url.sub!(/\$$/, '') || match_to_end
         pattern = url.split(%r{(\*{1,2}|(?<!\\):{1,2}[^/*$]+)}).each_slice(2).map { |unmatched, match|
           Regexp.escape(unmatched) << begin
             if %w{* **}.include? match
-              match == '*' ? "([^/]+#{lazy})" : "(.+#{lazy})"
+              match == '*' ? "([^/]+)" : "(.+)"
             elsif match
-              match[0..1] == '::' ? "(?<#{match[2..-1]}>.+#{lazy})" : "(?<#{match[1..-1]}>[^/]+#{lazy})"
+              match[0..1] == '::' ? "(?<#{match[2..-1]}>.+)" : "(?<#{match[1..-1]}>[^/]+)"
             else
               ''
             end
@@ -182,14 +177,17 @@ module Scorched
     end
     
     def initialize(env)
-      @request = env['rack.request'] ||= Request.new(env)
-      @response = env['rack.response'] ||= Response.new
+      define_singleton_method :env do
+        env
+      end
+      env['rack.request'] ||= Request.new(env)
+      env['rack.response'] ||= Response.new
     end
     
     def action
       inner_error = nil
       rescue_block = proc do |e|
-        raise e unless filters[:error].any? do |f|
+        raise unless filters[:error].any? do |f|
           (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) && check_conditions?(f[:conditions]) && instance_exec(e, &f[:proc])
         end
       end
@@ -197,33 +195,31 @@ module Scorched
       match = matches(true).first
       begin
         catch(:halt) do
-          if config[:strip_trailing_slash] == :redirect && @request.path[-1] == '/'
-            redirect(@request.path.chomp('/'))
-          elsif config[:strip_trailing_slash] == :ignore
-            @request.path.chomp('/')
+          if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
+            redirect(request.path.chomp('/'))
           end
           
           run_filters(:before)
           if match
-            @request.breadcrumb << match
+            request.breadcrumb << match
             # Proc's are executed in the context of this controller instance.
             target = match[:mapping][:target]
             begin
               catch(:halt) do
-                @response.merge! (Proc === target) ? instance_exec(@request.env, &target) : target.call(@request.env)
+                response.merge! (Proc === target) ? instance_exec(request.env, &target) : target.call(request.env)
               end
             rescue => inner_error
               rescue_block.call(inner_error)
             end
           else
-            @response.status = 404
+            response.status = 404
           end
           run_filters(:after)
         end
       rescue => outer_error
-        rescue_block.call(outer_error) unless outer_error == inner_error
+        outer_error == inner_error ? raise : rescue_block.call(outer_error)
       end
-      @response
+      response
     end
     
     def match?
@@ -233,7 +229,8 @@ module Scorched
     # Finds mappings that match the currently unmatched portion of the request path, returning an array of all matches.
     # If _short_circuit_ is set to true, it stops matching at the first positive match, returning only a single match.
     def matches(short_circuit = false)
-      to_match = @request.unmatched_path
+      to_match = request.unmatched_path
+      to_match = to_match.chomp('/') if config[:strip_trailing_slash] == :ignore && to_match =~ %r{./$}
       matches = []
       mappings.each do |m|
         m[:url].match(to_match) do |match_data|
@@ -267,18 +264,68 @@ module Scorched
     end
     
     def redirect(url, status = 307)
-      @response['Location'] = url
+      response['Location'] = url
       halt(status)
     end
     
     def halt(status = 200)
-      @response.status = status
+      response.status = status
       throw :halt
     end
     
-    # Syntactic shorthand for accessing Rack env hash.
-    def env
-      @request.env
+    # Convenience method for accessing Rack request.
+    def request
+      env['rack.request']
+    end
+    
+    # Convenience method for accessing Rack response.
+    def response
+      env['rack.response']
+    end
+    
+    # Convenience method for accessing Rack session.
+    def session
+      env['rack.session']
+    end
+    
+    # Flash session storage helper.
+    # Stores session data until the next time this method is called with the same arguments, at which point it's reset.
+    # The typical use case is to provide feedback to the user on the previous action they performed.
+    def flash(key = :flash)
+      raise Error, "Flash session data cannot be used without a valid Rack session" unless session
+      flash_hash = env['scorched.flash'] ||= {}
+      flash_hash[key] ||= {}
+      session[key] ||= {}
+      unless session[key].methods(false).include? :[]=
+        session[key].define_singleton_method(:[]=) do |k, v|
+          flash_hash[key][k] = v
+        end
+      end
+      session[key]
+    end
+    
+    after do
+      env['scorched.flash'].each { |k,v| session[k] = v } if session && env['scorched.flash']
+    end
+    
+    # Serves a thin layer of convenience to Rack's built-in methods: Request#cookies, Response#set_cookie, and
+    # Response#delete_cookie.
+    # If only one argument is given, the specified cookie is retreived and returned.
+    # If both arguments are supplied, the cookie is either set or deleted, depending on whether the second argument is
+    # nil, or otherwise is a hash containing the key/value pair ``:value => nil``.
+    # If you wish to set a cookie to an empty value without deleting it, you pass an empty string as the value
+    def cookie(name, *value)
+      name = name.to_s
+      if value.empty?
+        request.cookies[name]
+      else
+        value = Hash === value[0] ? value[0] : {value: value}
+        if value[:value].nil?
+          response.delete_cookie(name, value)
+        else
+          response.set_cookie(name, value)
+        end
+      end
     end
     
   private

@@ -9,15 +9,15 @@ An easy way to serve multiple content-types:
   
     after do
       if check_condition?(:media_type, 'text/html')
-        @response.body = [render(view)]
+        response.body = [render(view)]
       if check_condition?(:media_type, 'application/json')
-        @response['Content-type'] = 'application/json'
-        @response.body = [@response.body.to_json]
+        response['Content-type'] = 'application/json'
+        response.body = [response.body.to_json]
       elsif check_condition?(:media_type, 'application/pdf')
-        @response['Content-type'] = 'application/pdf'
-        # @response.body = [render_pdf(view)]
+        response['Content-type'] = 'application/pdf'
+        # response.body = [render_pdf(view)]
       else
-        @response.body = [render(view)]
+        response.body = [render(view)]
       end
     end
   

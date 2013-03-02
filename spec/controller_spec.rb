@@ -40,10 +40,10 @@ module Scorched
       it "raises exception when invalid mapping hash given" do
         expect {
           app << {url: '/'}
-        }.to raise_error(Scorched::Error)
+        }.to raise_error(ArgumentError)
         expect {
           app << {target: generic_handler}
-        }.to raise_error(Scorched::Error)
+        }.to raise_error(ArgumentError)
       end
     end
     
@@ -62,16 +62,6 @@ module Scorched
         response = rt.get '/about'
         request.captures.should == ['about']
       end
-      
-      it "can be configured to match lazily" do
-        app.config[:match_lazily] = true
-        request = nil
-        app << {url: '/*', target: proc do |env|
-          request = env['rack.request']; [200, {}, ['ok']]
-        end}
-        response = rt.get '/about'
-        request.captures.should == ['a']
-      end 
       
       it "can be forced to match end of URL" do
         app << {url: '/about$', target: generic_handler}
@@ -144,7 +134,7 @@ module Scorched
         response = rt.post "/"
         response.status.should == 200
         
-        app.conditions[:has_name] = proc { |name| @request.GET['name'] }
+        app.conditions[:has_name] = proc { |name| request.GET['name'] }
         app << {url: '/about', conditions: {methods: ['GET', 'POST'], has_name: 'Ronald'}, target: generic_handler}
         response = rt.get "/about"
         response.status.should == 404
@@ -187,7 +177,7 @@ module Scorched
       it "provides a method for every HTTP method" do
         [:get, :post, :put, :delete, :options, :head, :patch].each do |m|
           app.send(m, '/say_cool') { 'cool' }
-          rt.send(m, '/say_cool').body.should == 'cool'
+          rt.send(m, '/say_cool').body.should == (m == :head ? '' : 'cool')
         end
       end
       
@@ -318,8 +308,7 @@ module Scorched
       end
       
       they "catch exceptions" do
-        rt.get('/').status.should == 200
-        app.error { @response.status = 500 }
+        app.error { response.status = 500 }
         rt.get('/').status.should == 500
       end
       
@@ -337,7 +326,7 @@ module Scorched
         rt.get '/'
         handlers_called.should == 1
         
-        app.filters[:error].clear
+        app.error_filters.clear
         handlers_called = 0
         app.error { handlers_called += 1; false }
         app.error { handlers_called += 1 }
@@ -346,48 +335,52 @@ module Scorched
       end
       
       they "still runs after filters if route error is handled" do
-        app.after { @response.status = 111 }
+        app.after { response.status = 111 }
         app.error { true }
         rt.get('/').status.should == 111
       end
       
       they "can handle exceptions in before/after filters" do
-        app.error { |e| @response.write e.class.name }
+        app.error { |e| response.write e.class.name }
         app.after { raise ArgumentError }
         rt.get('/').body.should == 'StandardErrorArgumentError'
       end
       
-      they "only gets called once per error" do
+      they "only get called once per error" do
         times_called = 0
-        app.error { times_called += 1; false }
+        app.error { times_called += 1 }
         rt.get '/'
         times_called.should == 1
+      end
+      
+      they "fall through when unhandled" do
+        expect {
+          rt.get '/'
+        }.to raise_error(StandardError)
       end
       
       they "can optionally filter on one or more exception types" do
         app.get('/arg_error') { raise ArgumentError }
         
-        errors = []
-        app.error(StandardError, ArgumentError) { |e| errors << e.class }
+        app.error(StandardError, ArgumentError) { true }
         rt.get '/'
         rt.get '/arg_error'
-        errors.should == [StandardError, ArgumentError]
         
-        app.filters[:error].clear
-        errors = []
-        app.error(ArgumentError) { |e| errors << e.class }
-        rt.get '/'
+        app.error_filters.clear
+        app.error(ArgumentError) { true }
+        expect {
+          rt.get '/'
+        }.to raise_error(StandardError)
         rt.get '/arg_error'
-        errors.should == [ArgumentError]
       end
       
       they "can take an optional set of conditions" do
-        counter = 0
-        app.error(methods: ['GET', 'PUT']) { counter += 1  }
-        rt.post('/')
+        app.error(methods: ['GET', 'PUT']) { true  }
+        expect {
+          rt.post('/')
+        }.to raise_error(StandardError)
         rt.get('/')
         rt.put('/')
-        counter.should == 2
       end
     end
     
@@ -396,11 +389,11 @@ module Scorched
         Class.new(Scorched::Controller) do
           self.middleware << proc { use Scorched::SimpleCounter }
           get '/'do
-            @request.env['scorched.simple_counter']
+            request.env['scorched.simple_counter']
           end
           controller url: '/sub_controller' do
             get '/' do
-              @request.env['scorched.simple_counter']
+              request.env['scorched.simple_counter']
             end
           end
         end
@@ -432,17 +425,141 @@ module Scorched
       end
       
       it "still processes filters" do
-        app.after { @response.status = 403 }
+        app.after { response.status = 403 }
         app.get('/') { halt }
         rt.get('/').status.should == 403
       end
       
       it "short circuits filters if halted within filter" do
         app.before { halt }
-        app.after { @response.status = 403 }
+        app.after { response.status = 403 }
         rt.get('/').status.should == 200
       end
     end
     
+    describe "configuration" do
+      describe "strip_trailing_slash" do
+        it "is set to redirect by default" do
+          app.config[:strip_trailing_slash].should == :redirect
+          app.get('/test') { }
+          response = rt.get('/test/')
+          response.status.should == 307
+          response['Location'].should == '/test'
+        end
+        
+        it "can be set to ignore trailing slash while pattern matching" do
+          app.config[:strip_trailing_slash] = :ignore
+          hit = false
+          app.get('/test') { hit = true }
+          rt.get('/test/').status.should == 200
+          hit.should == true
+        end
+        
+        it "can be set not do nothing with a trailing slash" do
+          app.config[:strip_trailing_slash] = false
+          app.get('/test') { }
+          rt.get('/test/').status.should == 404
+          
+          app.get('/test/') { }
+          rt.get('/test/').status.should == 200
+        end
+      end
+      
+      describe "static_dir" do
+        it "is set to serve static files from 'public' directory by default" do
+          app.config[:static_dir].should == 'public'
+          response = rt.get('/static.txt')
+          response.status.should == 200
+          response.body.should == 'My static file!'
+        end
+        
+        it "can be disabled" do
+          app.config[:static_dir] = false
+          response = rt.get('/static.txt')
+          response.status.should == 404
+        end
+      end
+      
+      describe "sessions" do
+        it "provides convenience method for accessing the Rack session" do
+          rack_session = nil
+          app.get('/') { rack_session = session }
+          rt.get('/')
+          rack_session.should be_nil
+          app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
+          rt.get('/')
+          rack_session.should be_a(Rack::Session::Abstract::SessionHash)
+        end
+        
+        describe "flash" do
+          before(:each) do
+            app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
+          end
+          
+          it "keeps session variables that live for one page load" do
+            app.get('/set') { flash[:cat] = 'meow' }
+            app.get('/get') { flash[:cat] }
+            
+            rt.get('/set')
+            rt.get('/get').body.should == 'meow'
+            rt.get('/get').body.should == ''
+          end
+          
+          it "always reads from the original request flash" do
+            app.get('/') do
+              flash[:counter] = flash[:counter] ? flash[:counter] + 1 : 0
+              flash[:counter].to_s
+            end
+            
+            rt.get('/').body.should == ''
+            rt.get('/').body.should == '0'
+            rt.get('/').body.should == '1'
+          end
+          
+          it "can only remove flash variables if the flash object is accessed" do
+            app.get('/set') { flash[:cat] = 'meow' }
+            app.get('/get') { flash[:cat] }
+            app.get('/null') { }
+            
+            rt.get('/set')
+            rt.get('/null')
+            rt.get('/get').body.should == 'meow'
+            rt.get('/get').body.should == ''
+          end
+          
+          it "can keep multiple sets of flash session variables" do
+            app.get('/set_animal') { flash(:animals)[:cat] = 'meow' }
+            app.get('/get_animal') { flash(:animals)[:cat] }
+            app.get('/set_name') { flash(:names)[:jeff] = 'male' }
+            app.get('/get_name') { flash(:names)[:jeff] }
+            
+            rt.get('/set_animal')
+            rt.get('/set_name')
+            rt.get('/get_animal').body.should == 'meow'
+            rt.get('/get_name').body.should == 'male'
+            rt.get('/get_animal').body.should == ''
+            rt.get('/get_name').body.should == ''
+          end
+        end
+      end
+      
+      describe "cookie helper" do
+        it "sets, retrieves and deletes cookies" do
+          app.get('/') { cookie :test }
+          app.post('/') { cookie :test, 'hello' }
+          app.post('/goodbye') { cookie :test, {value: 'goodbye', expires: Time.now() + 999999 } }
+          app.delete('/') { cookie :test, nil }
+          
+          rt.get('/').body.should == ''
+          rt.post('/')
+          rt.get('/').body.should == 'hello'
+          rt.post('/goodbye')
+          rt.get('/').body.should == 'goodbye'
+          rt.delete('/')
+          rt.get('/').body.should == ''
+        end
+      end
+      
+    end
   end
 end

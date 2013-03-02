@@ -14,14 +14,14 @@ I think the biggest mistake made by the predecessors of Scorched such as Sinatra
 of the class. The consequences of this made for some awkwardness. Helpers are a classical reinvention of what
 classes and modules were already made to solve. Scorched implements Controllers as Classes, which in addition to having their own DSL, allow defining and calling traditional class methods. Allowing developers to implement helpers and other common functionality as proper methods not only makes them more predictable and familiar, but of course allow such helpers to be inheritable via plain-old Class inheritance.
 
-Perhaps another error (or area of sogginess, if you will) has been a lack of consideration for the hierarchical nature of websites, and the fact that sub-directories are often expecteded to inherit attributes of their parents. Scorched supports sub-controllers to any arbitrary depth, with each controllers filters and route conditions applied along the way. This can assist many areas of web development, including security, restful interfaces, and interchangeable output formats.
+Perhaps another error (or area of sogginess, if you will) has been a lack of consideration for the hierarchical nature of websites, and the fact that sub-directories are often expected to inherit attributes of their parents. Scorched supports sub-controllers to any arbitrary depth, with each controllers filters and route conditions applied along the way. This can assist many areas of web development, including security, restful interfaces, and interchangeable output formats.
 
 
 Design Philosophy
 -----------------
-Scorched has a relatively simple design philosophy. The main objective is to keep Scorched lean and generic. Scorched tries not to be opinionated. The general idea behind Scorched is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
+Scorched has a relatively simple design philosophy. The main objective is to keep Scorched lean and generic. Scorched refrains from expressing too much opinion. The general idea behind Scorched is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
 
-A key requirement for achieving _lean_ and _generic_ is to make Scorched easy to build on top of; to allow developers to tailor it to each of their projects with minimal overhead.
+There's little need for a framework to be opinionated if the opinions of the developer can be quickly and easily built into it on a per-application basis. To do this effectively, developers really need to understand Scorched, and the best way to lower facilitate that is to lower the learning curve by keeping the core design, logical, predictable, and concise. 
 
 
 First Impressions

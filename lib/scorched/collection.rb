@@ -1,12 +1,10 @@
-require 'set'
-
 module Scorched
   class Collection < Set
     # Redefine all methods as delegates of the underlying local set.
     extend DynamicDelegate
     alias_each(Set.instance_methods(false)) { |m| "_#{m}" }
     delegate 'to_set', *Set.instance_methods(false).reject { |m|
-      [:<<, :add, :add?, :clear, :delete, :delete?, :delete_if, :inspect, :merge, :replace, :subtract].include? m
+      [:<<, :add, :add?, :clear, :delete, :delete?, :delete_if, :merge, :replace, :subtract].include? m
     }
     
     # sets parent Collection object and returns self
@@ -26,6 +24,10 @@ module Scorched
     
     def to_a(inherit = true)
       to_set(inherit).to_a
+    end
+    
+    def inspect
+      "#<#{self.class}: #{_inspect}, #{to_set.inspect}>"
     end
   end
   

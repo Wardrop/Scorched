@@ -1,2 +1,2 @@
-require File.expand_path("../media_types.rb", __FILE__)
+require './media_types.rb'
 run MediaTypesExample

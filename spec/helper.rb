@@ -1,6 +1,7 @@
 require 'rack/test'
 require_relative '../lib/scorched.rb'
 
+
 module Scorched
   class SimpleCounter
     def initialize(app)
@@ -15,8 +16,6 @@ module Scorched
   end
 end
 
-Scorched::Controller.config[:strip_trailing_slash] = false
-
 # We set our target application and rack test environment using let. This ensures tests are isolated, and allows us to
 # easily swap out our target application.
 module GlobalConfig
@@ -27,6 +26,14 @@ module GlobalConfig
   
   let(:rt) do
     Rack::Test::Session.new(app)
+  end
+  
+  original_dir = __dir__
+  before(:all) do
+    Dir.chdir(__dir__)
+  end
+  after(:all) do
+    Dir.chdir(original_dir)
   end
 end
 
