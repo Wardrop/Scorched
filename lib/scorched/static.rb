@@ -1,14 +1,12 @@
 module Scorched
   class Static
-    def initialize(app, options={})
+    def initialize(app, dir = 'public')
       @app = app
-      @options = options
-      dir = options.delete(:dir) || 'public'
-      options[:cache_control] ||= 'no-cache'
-      @file_server = Rack::File.new(dir, options)
+      @file_server = Rack::File.new(dir)
     end
 
     def call(env)
+      @file_server.call(env)
       response = @file_server.call(env)
       response[0] >= 400 ? @app.call(env) : response 
     end

@@ -3,6 +3,9 @@ Milestones
 
 Changelog
 ---------
+### v0.5.1
+* Added URL helpers, #absolute and #url
+* Render helper now loads files itself as Tilt still has issues with UTF-8 files.
 
 ### v0.5
 * Implemented view rendering using Tilt.
@@ -46,6 +49,7 @@ Some of these remaining features may be broken out into a separate contributor l
 * Add view helpers
   * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is
     intended to make link building easier.
+  * Form populator
 * Provide a default error page somewhat similar to what Sinatra has.
 * Add debug logging to show each routing hop and the current environment (variables, mode, etc)
 * Environment optimised defaults

@@ -21,7 +21,14 @@ Design Philosophy
 -----------------
 Scorched has a relatively simple design philosophy. The main objective is to keep Scorched lean and generic. Scorched refrains from expressing too much opinion. The general idea behind Scorched is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
 
-There's little need for a framework to be opinionated if the opinions of the developer can be quickly and easily built into it on a per-application basis. To do this effectively, developers really need to understand Scorched, and the best way to lower facilitate that is to lower the learning curve by keeping the core design, logical, predictable, and concise. 
+There's little need for a framework to be opinionated if the opinions of the developer can be quickly and easily built into it on a per-application basis. To do this effectively, developers really need to understand Scorched, and the best way to lower facilitate that is to lower the learning curve by keeping the core design, logical, predictable, and concise.
+
+
+Magicians Not Welcome
+---------------------
+Scorched aims to be raw and transparent. Magic has no place, or need, in the world of Scorched. A thoughtful and simple design means there's no requirement for magic. Because of that, most developers should be able to master scorched in an evening, if that.
+
+Part of what keeps Scorched lightweight, is that unlike other lightweight web frameworks that attempt to hide Rack in the background, Scorched makes no such attempts, very rarely providing functionality that overlaps with that already provided by Rack. In fact, familiarity is somewhat of a pre-requisite to mastering Scorched.
 
 
 First Impressions

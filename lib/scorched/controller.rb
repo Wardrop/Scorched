@@ -1,6 +1,5 @@
 module Scorched
   class Controller
-    include ViewHelpers
     include Scorched::Options('config')
     include Scorched::Options('view_config')
     include Scorched::Options('conditions')
@@ -52,7 +51,7 @@ module Scorched
       use Rack::Head
       use Rack::MethodOverride
       use Rack::Accept
-      use Scorched::Static, :dir => this.config[:static_dir] if this.config[:static_dir]
+      use Scorched::Static, this.config[:static_dir] if this.config[:static_dir]
       use Rack::Logger, this.config[:logger] if this.config[:logger]
     }
     
@@ -325,6 +324,68 @@ module Scorched
         else
           response.set_cookie(name, value)
         end
+      end
+    end
+    
+    # Renders the given string or file path using the Tilt templating library.
+    # Options hash is merged with the controllers _view_config_. Tilt template options are passed through. 
+    # The template engine is derived from file name, or otherwise as specified by the _:engine_ option. If String is
+    # given, _:engine_ option must be set.
+    #
+    # Refer to Tilt documentation for a list of valid template engines.
+    def render(string_or_file, options = {}, &block)
+      options = view_config.merge(explicit_options = options)
+      engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[options[:engine]]
+      raise Error, "Invalid or undefined template engine: #{options[:engine].inspect}" unless engine
+      if Symbol === string_or_file
+        file = string_or_file.to_s
+        file = file << ".#{options[:engine]}" unless derived_engine
+        file = File.join(options[:dir], file) if options[:dir]
+        # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
+        template = engine.new(nil, nil, options) { File.read(file) }
+      else
+        template = engine.new(nil, nil, options) { string_or_file }
+      end
+      
+      # The following chunk of code is responsible for preventing the rendering of layouts within views.
+      options[:layout] = false if @_no_default_layout && !explicit_options[:layout]
+      begin
+        @_no_default_layout = true
+        output = template.render(self, options[:locals], &block)
+      ensure
+        @_no_default_layout = false
+      end
+      output = render(options[:layout], options.merge(layout: false)) { output } if options[:layout]
+      output
+    end
+    
+    # Takes an optional URL, relative to the applications root, and returns a fully qualified URL.
+    # Example: url('/example?show=30') #=> https://localhost:9292/myapp/example?show=30
+    def url(path = nil)
+      return path if path && URI.parse(path).scheme
+      uri = URI::Generic.build(
+        scheme: env['rack.url_scheme'],
+        host: env['SERVER_NAME'],
+        port: env['SERVER_PORT'].to_i,
+        path: env['SCRIPT_NAME']
+      )
+      if path
+        path[0,0] = '/' unless path[0] == '/'
+        uri.to_s.chomp('/') << path
+      else
+        uri.to_s
+      end
+      
+    end
+    
+    # Takes an optional path, relative to the applications root URL, and returns an absolute path.
+    # Example: absolute('/style.css') #=> /myapp/style.css
+    def absolute(path = nil)
+      return path if path && URI.parse(path).scheme
+      if path
+        [request.script_name, path].join('/').gsub(%r{/+}, '/')
+      else
+        request.script_name
       end
     end
     

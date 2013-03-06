@@ -560,6 +560,135 @@ module Scorched
         end
       end
       
+      describe "rendering" do
+        before(:each) do
+          app.view_config.each { |k,v| app.view_config[k] = nil }
+        end
+
+        it "can render a file, relative to the application root" do
+          app.get('/') do
+            render(:'views/main.erb').should == "3 for me"
+          end
+          rt.get('/')
+        end
+
+        it "can render a string" do
+          app.get('/') do
+            render('<%= 1 + 1  %> for you', engine: :erb).should == "2 for you"
+          end
+          rt.get('/')
+        end
+
+        it "takes an optional view directory, relative to the application root" do
+          app.get('/') do
+            render(:'main.erb', dir: 'views').should == "3 for me"
+          end
+          rt.get('/')
+        end
+
+        it "takes an optional block to be yielded by the view" do
+          app.get('/') do
+            render(:'views/layout.erb'){ "in the middle" }.should == "(in the middle)"
+          end
+          rt.get('/')
+        end
+
+        it "renders the given layout" do
+          app.get('/') do
+            render(:'views/main.erb', layout: :'views/layout.erb').should == "(3 for me)"
+          end
+          rt.get('/')
+        end
+
+        it "merges options with view config" do
+          app.get('/') do
+            render(:'main.erb').should == "3 for me"
+          end
+          app.get('/full_path') do
+            render(:'views/main.erb', {layout: :'views/layout.erb', dir: nil}).should == "(3 for me)"
+          end
+          app.view_config[:dir] = 'views'
+          rt.get('/')
+          rt.get('/full_path')
+        end
+
+        it "derived template engine overrides specified engine" do
+          app.view_config[:dir] = 'views'
+          app.view_config[:engine] = :erb
+          app.get('/str') do
+            render(:'other.str').should == "hello hello"
+          end
+          app.get('/erb_file') do
+            render(:main).should == "3 for me"
+          end
+          app.get('/erb_string') do
+            render('<%= 1 + 1  %> for you').should == "2 for you"
+          end
+          rt.get('/str')
+          rt.get('/erb_file')
+          rt.get('/erb_string')
+        end
+
+        it "ignores default layout when called within a view" do
+          app.view_config << {:dir => 'views', :layout => :layout, :engine => :erb}
+          app.get('/') do
+            render :composer
+          end
+          rt.get('/').body.should == '({1 for none})'
+        end
+      end
+      
+      describe "url helpers" do
+        let(:myapp) do
+          Class.new(Scorched::Controller)
+        end
+        
+        let(:app) do
+          the_app = myapp
+          builder = Rack::Builder.new
+          builder.map('/myapp') { run the_app }
+          builder.to_app
+        end
+        
+        describe "url" do
+          it "returns the fully qualified URL" do
+            myapp.get('/') { url }
+            rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
+              'https://scorchedrb.com:73/myapp'
+          end
+          
+          it "can append an optional path" do
+            myapp.get('/') { url('hello') }
+            rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
+              'https://scorchedrb.com:73/myapp/hello'
+          end
+          
+          it "returns the given URL if scheme detected" do
+            test_url = 'http://google.com/blah'
+            myapp.get('/') { url(test_url) }
+            rt.get('/myapp').body.should == test_url
+          end
+        end
+        
+        describe "absolute" do
+          it "returns an absolute URL path" do
+            myapp.get('/absolute') { absolute }
+            rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp'
+          end
+          
+          it "can append an optional path" do
+            myapp.get('/absolute') { absolute('hello') }
+            rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp/hello'
+          end
+          
+          it "returns the given URL if scheme detected" do
+            test_url = 'http://google.com/blah'
+            myapp.get('/') { absolute(test_url) }
+            rt.get('/myapp').body.should == test_url
+          end
+        end
+      end
+      
     end
   end
 end

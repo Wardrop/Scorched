@@ -1,5 +1,5 @@
-$LOAD_PATH.unshift File.join(__dir__, 'lib')
-require 'scorched/version' # Load scorched to inspect it for information, such as version.
+$LOAD_PATH.unshift File.expand_path('../lib', __FILE__)
+require 'scorched/version'
 
 Gem::Specification.new 'scorched', Scorched::VERSION do |s|
   s.summary           = "Light-weight, DRY as a desert, web framework for Ruby"
