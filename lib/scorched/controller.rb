@@ -120,8 +120,8 @@ module Scorched
       # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
       def route(url = nil, priority = nil, **conditions, &block)
         target = lambda do |env|
-          env['rack.response'].body << instance_exec(*env['rack.request'].captures, &block)
-          env['rack.response']
+          env['scorched.response'].body = instance_exec(*env['scorched.request'].captures, &block)
+          env['scorched.response']
         end
         self << {url: compile(url, true), priority: priority, conditions: conditions, target: target} if url
         target
@@ -179,8 +179,8 @@ module Scorched
       define_singleton_method :env do
         env
       end
-      env['rack.request'] ||= Request.new(env)
-      env['rack.response'] ||= Response.new
+      env['scorched.request'] ||= Request.new(env)
+      env['scorched.response'] ||= Response.new
     end
     
     def action
@@ -274,12 +274,12 @@ module Scorched
     
     # Convenience method for accessing Rack request.
     def request
-      env['rack.request']
+      env['scorched.request']
     end
     
     # Convenience method for accessing Rack response.
     def response
-      env['rack.response']
+      env['scorched.response']
     end
     
     # Convenience method for accessing Rack session.

@@ -1,5 +1,7 @@
-Managing Request State
-----------------------
-Because Scorched allows sub-controllers to an arbitrary depth and treats all controllers equal (i.e has no concept of a _root_ controller), it means instance variables cannot be used to track, maintain or share request state between controllers. I mention this because instance variables are the most common way to manage the request state in the likes of Sinatra.
+Sharing and Managing Request State
+==================================
+Because Scorched allows sub-controllers to an arbitrary depth and treats all controllers equal (i.e has no concept of a _root_ controller), it means instance variables cannot be used to track, maintain or share request state between controllers. I mention this because instance variables are the most common way to manage the request state in some other frameworks, such as Sinatra.
 
-As an example, consider the Scorched implementation of flash session data. This data must be shared between controllers throughout the life of the request. The solution here, which you can find by looking at the Scorched source code, is to use the Rack environment hash. It's the one object that's accessible throughout the entire life-cycle of a request, and it's what you should use to maintain request state between controllers and even other embedded Rack applications.
+The only data exchanged between controllers is the Rack environment hash. Using the Rack environment hash is the only thread-safe way to maintain and share the request state.
+
+As an example, consider the Scorched implementation of flash session data. Flash session data must be shared between controllers throughout the life of the request, and hence the rack environment hash is the only solution.

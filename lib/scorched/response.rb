@@ -14,5 +14,9 @@ module Scorched
         self.status, @header, self.body = response
       end
     end
+    
+    def body=(value)
+      super(value.respond_to?(:each) ? value : [value])
+    end
   end
 end

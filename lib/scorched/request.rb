@@ -20,7 +20,7 @@ module Scorched
     
     def unmatched_path
       path = path_info.partition(matched_path).last
-      path[0,0] = '/' unless path[0] == '/'
+      path[0,0] = '/' if path.empty? || matched_path[-1] == '/'
       path
     end
   

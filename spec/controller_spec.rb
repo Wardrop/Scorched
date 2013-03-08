@@ -55,12 +55,12 @@ module Scorched
       end
       
       it "matches eagerly by default" do
-        request = nil
+        req = nil
         app << {url: '/*', target: proc do |env|
-          request = env['rack.request']; [200, {}, ['ok']]
+          req = request; [200, {}, ['ok']]
         end}
         response = rt.get '/about'
-        request.captures.should == ['about']
+        req.captures.should == ['about']
       end
       
       it "can be forced to match end of URL" do
@@ -72,40 +72,60 @@ module Scorched
         response.status.should == 200
       end
       
+      it "unmatched path doesn't always begin with a forward slash" do
+        gh = generic_handler
+        app << {url: '/ab', target: Class.new(Scorched::Controller) do
+          map(url: 'out', target: gh)
+        end}
+        rt.get('/about').body.should == "ok"
+      end
+      
+      it "unmatched path begins with forward slash if last match was up to or included a forward slash" do
+        gh = generic_handler
+        app << {url: '/about/', target: Class.new(Scorched::Controller) do
+          map(url: '/us', target: gh)
+        end}
+        app << {url: '/contact', target: Class.new(Scorched::Controller) do
+          map(url: '/us', target: gh)
+        end}
+        rt.get('/about/us').body.should == "ok"
+        rt.get('/contact/us').body.should == "ok"
+      end
+      
       it "can match anonymous wildcards" do
-        request = nil
+        req = nil
         app << {url: '/anon/*/**', target: proc do |env|
-          request = env['rack.request']; [200, {}, ['ok']]
+          req = request; [200, {}, ['ok']]
         end}
         response = rt.get '/anon/jeff/has/crabs'
-        request.captures.should == ['jeff', 'has/crabs']
+        req.captures.should == ['jeff', 'has/crabs']
       end
       
       it "can match named wildcards (ignoring anonymous captures)" do
-        request = nil
+        req = nil
         app << {url: '/anon/:name/*/::infliction', target: proc do |env|
-          request = env['rack.request']; [200, {}, ['ok']]
+          req = request; [200, {}, ['ok']]
         end}
         response = rt.get '/anon/jeff/smith/has/crabs'
-        request.captures.should == {name: 'jeff', infliction: 'has/crabs'}
+        req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
       
       it "can match regex and preserve anonymous captures" do
-        request = nil
+        req = nil
         app << {url: %r{/anon/([^/]+)/(.+)}, target: proc do |env|
-          request = env['rack.request']; [200, {}, ['ok']]
+          req = request; [200, {}, ['ok']]
         end}
         response = rt.get '/anon/jeff/has/crabs'
-        request.captures.should == ['jeff', 'has/crabs']
+        req.captures.should == ['jeff', 'has/crabs']
       end
       
       it "can match regex and preserve named captures (ignoring anonymous captures)" do
-        request = nil
+        req = nil
         app << {url: %r{/anon/(?<name>[^/]+)/([^/]+)/(?<infliction>.+)}, target: proc do |env|
-          request = env['rack.request']; [200, {}, ['ok']]
+          req = request; [200, {}, ['ok']]
         end}
         response = rt.get '/anon/jeff/smith/has/crabs'
-        request.captures.should == {name: 'jeff', infliction: 'has/crabs'}
+        req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
       
       it "matches routes based on priority, otherwise giving precedence to those defined first" do
