@@ -15,7 +15,7 @@ module Scorched
     }
     
     view_config << {
-      :dir => 'views', # The directory containing all the view templates, relative to the application root.
+      :dir => 'views', # The directory containing all the view templates, relative to the current working directory.
       :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
       :engine => :erb
     }
@@ -84,17 +84,17 @@ module Scorched
       # Generates and assigns mapping hash from the given arguments.
       #
       # Accepts the following keyword arguments:
-      #   :url - The url pattern to match on. Required.
+      #   :pattern - The url pattern to match on. Required.
       #   :target - A proc to execute, or some other object that responds to #call. Required.
       #   :priority - Negative or positive integer for giving a priority to the mapped item.
       #   :conditions - A hash of condition:value pairs
       # Raises ArgumentError if required key values are not provided.
-      def map(url: nil, priority: nil, conditions: {}, target: nil)
-        raise ArgumentError, "Mapping must specify url pattern and target" unless url && target
+      def map(pattern: nil, priority: nil, conditions: {}, target: nil)
+        raise ArgumentError, "Mapping must specify url pattern and target" unless pattern && target
         priority = priority.to_i
         insert_pos = mappings.take_while { |v| priority <= v[:priority]  }.length
         mappings.insert(insert_pos, {
-          url: compile(url),
+          pattern: compile(pattern),
           priority: priority,
           conditions: conditions,
           target: target
@@ -113,17 +113,17 @@ module Scorched
       # (or inherits from) a Scorched::Controller.
       def controller(parent_class = self, **mapping, &block)
         c = Class.new(parent_class, &block)
-        self << {url: '/', target: c}.merge(mapping)
+        self << {pattern: '/', target: c}.merge(mapping)
         c
       end
       
       # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
-      def route(url = nil, priority = nil, **conditions, &block)
+      def route(pattern = nil, priority = nil, **conditions, &block)
         target = lambda do |env|
           env['scorched.response'].body = instance_exec(*env['scorched.request'].captures, &block)
           env['scorched.response']
         end
-        self << {url: compile(url, true), priority: priority, conditions: conditions, target: target} if url
+        self << {pattern: compile(pattern, true), priority: priority, conditions: conditions, target: target} if pattern
         target
       end
 
@@ -151,11 +151,11 @@ module Scorched
       # Parses and compiles the given URL string pattern into a regex if not already, returning the resulting regexp
       # object. Accepts an optional _match_to_end_ argument which will ensure the generated pattern matches to the end
       # of the string.
-      def compile(url, match_to_end = false)
-        return url if Regexp === url
-        raise Error, "Can't compile URL of type #{url.class}. Must be String or Regexp." unless String === url
-        match_to_end = !!url.sub!(/\$$/, '') || match_to_end
-        pattern = url.split(%r{(\*{1,2}|(?<!\\):{1,2}[^/*$]+)}).each_slice(2).map { |unmatched, match|
+      def compile(pattern, match_to_end = false)
+        return pattern if Regexp === pattern
+        raise Error, "Can't compile URL of type #{pattern.class}. Must be String or Regexp." unless String === pattern
+        match_to_end = !!pattern.sub!(/\$$/, '') || match_to_end
+        regex_pattern = pattern.split(%r{(\*{1,2}|(?<!\\):{1,2}[^/*$]+)}).each_slice(2).map { |unmatched, match|
           Regexp.escape(unmatched) << begin
             if %w{* **}.include? match
               match == '*' ? "([^/]+)" : "(.+)"
@@ -166,8 +166,8 @@ module Scorched
             end
           end
         }.join
-        pattern << '$' if match_to_end
-        Regexp.new(pattern)
+        regex_pattern << '$' if match_to_end
+        Regexp.new(regex_pattern)
       end
     end
     
@@ -232,7 +232,7 @@ module Scorched
       to_match = to_match.chomp('/') if config[:strip_trailing_slash] == :ignore && to_match =~ %r{./$}
       matches = []
       mappings.each do |m|
-        m[:url].match(to_match) do |match_data|
+        m[:pattern].match(to_match) do |match_data|
           if match_data.pre_match == ''
             if check_conditions?(m[:conditions])
               if match_data.names.empty?
@@ -240,7 +240,7 @@ module Scorched
               else
                 captures = Hash[match_data.names.map{|v| v.to_sym}.zip match_data.captures]
               end
-              matches << {mapping: m, captures: captures, url: match_data.to_s}
+              matches << {mapping: m, captures: captures, path: match_data.to_s}
               break if short_circuit
             end
           end
@@ -375,7 +375,6 @@ module Scorched
       else
         uri.to_s
       end
-      
     end
     
     # Takes an optional path, relative to the applications root URL, and returns an absolute path.

@@ -1,17 +1,17 @@
 Be Creative
 ===========
-To get the most out of Scorched requires a bit of creative thinking. A couple of examples have been provided below.
+Getting the most out of Scorched requires a bit of creative thinking. A couple of examples are given below.
 
 Effortless REST
 ---------------
 An DRY way to serve multiple content-types:
-    
+
     # ruby
     class App < Scorched::Controller
       def view(view = nil)
         view ? env['app.view'] = view : env['app.view']
       end
-
+      
       after do
         data = response.body.join('')
         response['Content-type'] = 'text/html'
@@ -28,7 +28,7 @@ An DRY way to serve multiple content-types:
           response.body = render(view, locals: {data: data})
         end
       end
-
+      
       get '/' do
         view :index
         [
@@ -38,3 +38,8 @@ An DRY way to serve multiple content-types:
       end
     end
   
+
+Authentication and Permissions
+------------------------------
+
+_Example coming soon._

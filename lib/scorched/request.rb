@@ -1,6 +1,7 @@
 module Scorched
   class Request < Rack::Request
-    # Keeps track of the matched URL portions and what object handled them.
+    # Keeps track of the matched URL portions and what object handled them. Useful for debugging and building
+    # breadcrumb navigation.
     def breadcrumb
       env['breadcrumb'] ||= []
     end
@@ -10,14 +11,17 @@ module Scorched
       breadcrumb.last ? breadcrumb.last[:captures] : []
     end
     
+    # Returns an array of capture arrays; one for each mapping that's been hit during the request processing so far.
     def all_captures
       breadcrumb.map { |v| v[:captures] }
     end
     
+    # The portion of the path that's currently been matched by one or more mappings.
     def matched_path
-      join_paths(breadcrumb.map{|v| v[:url]})
+      join_paths(breadcrumb.map{|v| v[:path]})
     end
     
+    # The remaining portion of the path that has yet to be matched by any mappings.
     def unmatched_path
       path = path_info.partition(matched_path).last
       path[0,0] = '/' if path.empty? || matched_path[-1] == '/'
