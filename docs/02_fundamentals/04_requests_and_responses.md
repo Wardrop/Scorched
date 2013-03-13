@@ -11,6 +11,20 @@ Refer to the _Rack_ documentation for more information on the ``Rack::Request`` 
 
 Scorched Extras
 ---------------
-As mentioned, Scorched tacks a few extras onto it's ``Scorched::Request`` and ``Scorched::Response`` classes. Most of these extras were added as a requirement of the Scorched controller, but they're just as useful to web developers and therefore worth knowing about.
+As mentioned, Scorched tacks a few extras onto it's ``Scorched::Request`` and ``Scorched::Response`` classes. Most of these extras were added as a requirement of the Scorched controller, but they're just as useful to other developers.
 
-Refer to the generated API documentation.
+Refer to the generated API documentation for ``Scorched::Request`` and ``Scorched::Response``.
+
+
+Halting Requests
+----------------
+There may be instances we're you want to shortcut out-of processing the current request. The ``halt`` method allows you to do this, though it's worth clarifying its behaviour.
+
+When ``halt`` is called within a route, it simply exists out of that route, and begins processing any _after_ filters. Halt can also be used within a _before_ or _after_ filter, in which case any remaining filters in the current controller are skipped.
+
+Calls to ``halt`` don't propagate up the controller chain. They're local to the controller. A call to ``halt`` is equivalent to doing a ``throw :halt``. Calling ``halt`` is often preferred though because as well as being shorter, it can take an optional argument to set the response status, which is something you typically want to do when halting a request.
+
+
+Redirections
+------------
+A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple ``redirect`` method which takes one argument - the URL to redirect to. Like ``halt`` it's mostly a convenience method. It sets the _Location_ header of the response before halting the request.

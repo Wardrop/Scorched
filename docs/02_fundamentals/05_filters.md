@@ -1,8 +1,8 @@
 Filters
 =======
-Filters serve as a handy place to put functionality and behaviour that's common to a set of routes, or for that matter, a whole website or application. Filters are executed in the context of the controller; the same context as routes. Filters are also inheritable, meaning sub-classes inherit the filters of their parent - this inheritance is implemented such that each filter will only run once per-request.
+Filters serve as a handy place to put functionality and behaviour that's common to a set of routes, or for that matter, a whole website or application. Filters are executed in the context of the controller; the same context as routes. Filters are also inheritable, meaning sub-classes inherit the filters of their parent - this inheritance is enabled through the use of the ``Scorched::Collection`` class, and is implemented such that each filter will only run once per-request.
 
-There are currently two types of filter in Scorched, as documented below.
+There are currently two types of filter in Scorched, both of which are documented below.
 
 
 Before and After Filters
