@@ -1,4 +1,4 @@
-Simple, Powerful, Scorched
+[Simple, Powerful, Scorched](http://scorchedrb.com)
 ==========================
 
 Scorched is a generic, unopinionated, DRY, light-weight web framework for Ruby. It provides a generic yet powerful set of constructs for processing HTTP requests, with which websites and applications of almost any scale can be built.
