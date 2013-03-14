@@ -3,6 +3,9 @@ Milestones
 
 Changelog
 ---------
+### v0.5.2
+* Response content-type now defaults to "text/html;charset=utf-8", rather than empty.
+
 ### v0.5.1
 * Added URL helpers, #absolute and #url
 * Render helper now loads files itself as Tilt still has issues with UTF-8 files.
