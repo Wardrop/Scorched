@@ -585,7 +585,7 @@ module Scorched
       
       describe "rendering" do
         before(:each) do
-          app.view_config.each { |k,v| app.view_config[k] = nil }
+          app.render_defaults.each { |k,v| app.render_defaults[k] = nil }
         end
 
         it "can render a file, relative to the application root" do
@@ -630,14 +630,14 @@ module Scorched
           app.get('/full_path') do
             render(:'views/main.erb', {layout: :'views/layout.erb', dir: nil}).should == "(3 for me)"
           end
-          app.view_config[:dir] = 'views'
+          app.render_defaults[:dir] = 'views'
           rt.get('/')
           rt.get('/full_path')
         end
 
         it "derived template engine overrides specified engine" do
-          app.view_config[:dir] = 'views'
-          app.view_config[:engine] = :erb
+          app.render_defaults[:dir] = 'views'
+          app.render_defaults[:engine] = :erb
           app.get('/str') do
             render(:'other.str').should == "hello hello"
           end
@@ -653,7 +653,7 @@ module Scorched
         end
 
         it "ignores default layout when called within a view" do
-          app.view_config << {:dir => 'views', :layout => :layout, :engine => :erb}
+          app.render_defaults << {:dir => 'views', :layout => :layout, :engine => :erb}
           app.get('/') do
             render :composer
           end

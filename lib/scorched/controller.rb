@@ -1,7 +1,7 @@
 module Scorched
   class Controller
     include Scorched::Options('config')
-    include Scorched::Options('view_config')
+    include Scorched::Options('render_defaults')
     include Scorched::Options('conditions')
     include Scorched::Collection('middleware')
     include Scorched::Collection('before_filters')
@@ -14,7 +14,7 @@ module Scorched
       :logger => Logger.new(STDOUT)
     }
     
-    view_config << {
+    render_defaults << {
       :dir => 'views', # The directory containing all the view templates, relative to the current working directory.
       :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
       :engine => :erb
@@ -118,25 +118,25 @@ module Scorched
       end
       
       # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
-      def route(pattern = nil, priority = nil, **conditions, &block)
+      def route(pattern = nil, priority = nil, **conds, &block)
         target = lambda do |env|
           env['scorched.response'].body = instance_exec(*env['scorched.request'].captures, &block)
           env['scorched.response']
         end
-        self << {pattern: compile(pattern, true), priority: priority, conditions: conditions, target: target} if pattern
+        self << {pattern: compile(pattern, true), priority: priority, conditions: conds, target: target} if pattern
         target
       end
 
       ['get', 'post', 'put', 'delete', 'head', 'options', 'patch'].each do |method|
         methods = (method == 'get') ? ['GET', 'HEAD'] : [method.upcase]
-        define_method(method) do |*args, **conditions, &block|
-          conditions.merge!(methods: methods)
-          route(*args, **conditions, &block)
+        define_method(method) do |*args, **conds, &block|
+          conds.merge!(methods: methods)
+          route(*args, **conds, &block)
         end
       end
       
-      def filter(type, *args, **conditions, &block)
-        filters[type.to_sym] << {args: args, conditions: conditions, proc: block}
+      def filter(type, *args, **conds, &block)
+        filters[type.to_sym] << {args: args, conditions: conds, proc: block}
       end
       
       # A bit of syntactic sugar for #filter.
@@ -328,13 +328,13 @@ module Scorched
     end
     
     # Renders the given string or file path using the Tilt templating library.
-    # Options hash is merged with the controllers _view_config_. Tilt template options are passed through. 
-    # The template engine is derived from file name, or otherwise as specified by the _:engine_ option. If String is
-    # given, _:engine_ option must be set.
+    # The options hash is merged with the controllers _render_defaults_. Unrecognised options are passed through to Tilt. 
+    # The template engine is derived from file name, or otherwise as specified by the _:engine_ option. If a string is
+    # given, the _:engine_ option must be set.
     #
     # Refer to Tilt documentation for a list of valid template engines.
     def render(string_or_file, options = {}, &block)
-      options = view_config.merge(explicit_options = options)
+      options = render_defaults.merge(explicit_options = options)
       engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[options[:engine]]
       raise Error, "Invalid or undefined template engine: #{options[:engine].inspect}" unless engine
       if Symbol === string_or_file

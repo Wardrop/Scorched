@@ -3,6 +3,12 @@ Milestones
 
 Changelog
 ---------
+### v0.6
+* ``view_config`` options hash renamed to ``render_defaults`` which better reflects its function.
+
+### v0.5.2
+* Minor modification to routing to make it behave as a documented regarding matching at the directly before or on a path.
+
 ### v0.5.1
 * Added URL helpers, #absolute and #url
 * Render helper now loads files itself as Tilt still has issues with UTF-8 files.
@@ -41,24 +47,24 @@ Changelog
 
 
 
-Remaining
----------
+To Do
+-----
 Some of these remaining features may be broken out into a separate contributor library to keep the core lean and focused.
 
 * Make specs for Collection and Options classes more thorough, e.g. test all non-reading modifiers such as clear, delete, etc.
 * Add view helpers
   * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is
     intended to make link building easier.
-  * Form populator
-* Provide a default error page somewhat similar to what Sinatra has.
-* Add debug logging to show each routing hop and the current environment (variables, mode, etc)
+  * Form populator implemented with Nokogiri. This would have to be added to a contrib library.
+* Add Verbose logging, including debug logging to show each routing hop and the current environment (variables, mode, etc)
 * Environment optimised defaults
   * Production
-    * Rack::Protection
-    * Disable static file serving
+    * use Rack::Protection
+    * Disable static file serving. Sub-controllers can obviously override this. This will just change the default.
   * Development
-    * Verbose logging to STDOUT
+    * Log to STDOUT
     * use Rack::ShowExceptions
+    * Add developer-friendly 404 error page.
     
 Unlikely
 --------

@@ -19,11 +19,18 @@ Each configuration is listed below, with the default value of each included.
     The directory Scorched should serve static files from. Should be set to false if the web server or some other middleware is serving static files.
 * ``config[:logger] = Logger.new(STDOUT)`` - Currently does nothing until logging is added to Scorched.
 
-The follow view configuration options can all be overriden when calling ``render``.
+You can also configure the default options when rendering views by setting them on the ``render_defaults`` hash. The options specified here are merged with those provided when calling the ``render`` method, with the explicit options obviously taking precedence over the defaults.
 
-* ``view_config[:dir] = 'views'``  
-    The directory containing all the view templates, relative to the current working directory.
-* ``view_config[:layout] = false``  
-    The default layout to use when rendering views. 
-* ``view_config[:engine] = :erb``  
-    The default rendering engine. This is used when ``render`` is given a filename with no extension, or a string.
+Refer to the _views_ page for more information.
+
+Here is an example of the configuration options in action. A couple of different ways to set the options are shown. Refer to the API documentation for the ``Scorched::Options`` for more information.
+
+    # ruby
+    class MyApp < Scorched::Controller
+      config[:static_dir] = '../public'
+      render_defaults.merge!(
+        dir: 'templates',
+        layout: :main_layout
+        engine: :haml
+      )
+    end
