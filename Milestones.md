@@ -3,11 +3,13 @@ Milestones
 
 Changelog
 ---------
+<<<<<<< HEAD
 ### v0.6
 * ``view_config`` options hash renamed to ``render_defaults`` which better reflects its function.
 
 ### v0.5.2
 * Minor modification to routing to make it behave as a documented regarding matching at the directly before or on a path.
+* Response content-type now defaults to "text/html;charset=utf-8", rather than empty.
 
 ### v0.5.1
 * Added URL helpers, #absolute and #url

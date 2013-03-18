@@ -19,5 +19,13 @@ module Scorched
     def body=(value)
       super(value.respond_to?(:each) ? value : [value])
     end
+    
+    def finish(*args, &block)
+      self['Content-Type'] ||= 'text/html;charset=utf-8'
+      super
+    end
+    
+    alias :to_a :finish
+    alias :to_ary :finish
   end
 end

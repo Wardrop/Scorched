@@ -28,6 +28,7 @@ And light the flame...
 
     rackup hello_world.ru
 
+_**Note**: Scorched requires Ruby 2.0 as it makes use of a couple of new features. By the time Scorched hits v1.0, there should be little reason not to be running Ruby 2.0._
 
 The Errors of Our Past
 ----------------------
