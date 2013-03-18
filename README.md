@@ -32,23 +32,23 @@ _**Note**: Scorched requires Ruby 2.0 as it makes use of a couple of new feature
 
 The Errors of Our Past
 ----------------------
-One of the big mistakes made by a lot of other Ruby frameworks, was to not leverage the power of the class. The consequences of this made for some awkwardness. Helpers for example, are a classical reinvention of what classes and modules were already made to solve. Scorched implements Controllers as Classes, which in addition to having their own DSL, allow defining and calling traditional class methods. The decision to allow developers to implement helpers and other common functionality as proper methods not only makes Controllers somewhat more predictable and familiar, but of course allow such helpers to be inheritable via plain-old Class inheritance.
+One of the mistakes made by a lot of other Ruby frameworks, was to not leverage the power of the class. The consequences of this made for some awkwardness. Helpers for example, are a classical reinvention of what classes and modules were already made to solve. Scorched implements Controllers as classes, which in addition to having their own DSL, allow defining and calling traditional instance methods. The decision to allow developers to implement helpers and other common functionality as proper methods not only makes Controllers somewhat more predictable and familiar, but of course allow such helpers to be inheritable via plain-old class inheritance.
 
 Perhaps another design oversight of other frameworks, has been the lack of consideration for the hierarchical nature of websites, and the fact that sub-directories are often expected to inherit attributes of their parents. Scorched supports sub-controllers to any arbitrary depth, with each controllers configuration, filters, route conditions, etc, applied along the way. This can assist many areas of web development, including security, restful interfaces, and interchangeable content types.
 
 
 Design Philosophy
 -----------------
-Scorched has a relatively simple design philosophy. The main objective is to keep Scorched lean and generic. Scorched refrains from expressing too much opinion. The general idea behind Scorched is to give developers all the tools to quickly put together small, medium and perhaps even large websites and applications.
+Scorched has a relatively simple design philosophy. The main objective is to keep Scorched lean and generic. Scorched refrains from expressing any opinion about how you design and structure your application. The general idea is to give developers the constructs to quickly put together small, medium and even large websites and applications.
 
-There's little need for a framework to be opinionated if the opinions of the developer can be quickly and easily built into it on a per-application basis. To do this effectively, developers really need to understand Scorched, and the best way to lower facilitate that is to lower the learning curve by keeping the core design, logical, predictable, and concise.
+There's little need for a framework to be opinionated if the opinions of the developer can be quickly and easily built into it on a per-application basis. To do this effectively, developers really need to understand Scorched, and the best way to facilitate that is to lower the learning curve by keeping the core design logical, predictable, and concise.
 
 
 Magicians Not Welcome
 ---------------------
-Scorched aims to be raw and transparent. Magic has no place, or need, in the world of Scorched. A thoughtful and simple design means there's no requirement for magic. Because of that, most developers should be able to master scorched in an evening, if that.
+Scorched aims to be raw and transparent. Magic has no place. A thoughtful and simple design means there's no requirement for magic. Because of that, most developers should be able to master scorched in an evening.
 
-Part of what keeps Scorched lightweight, is that unlike other lightweight web frameworks that attempt to hide Rack in the background, Scorched makes no such attempts, very rarely providing functionality that overlaps with that already provided by Rack. In fact, familiarity is somewhat of a pre-requisite to mastering Scorched.
+Part of what keeps Scorched lightweight, is that unlike other lightweight web frameworks that attempt to hide Rack in the background, Scorched makes no such attempts, very rarely providing functionality that overlaps with what's already provided by Rack. In fact, familiarity with Rack is somewhat of a pre-requisite to mastering Scorched.
 
 
 First Impressions
