@@ -3,7 +3,18 @@ Milestones
 
 Changelog
 ---------
-<<<<<<< HEAD
+### v0.7
+* Logging preparations made. Now just have to decide on a logging strategy, such as what to log, how verbose the messages should be, etc.
+* Rack::Protection middleware is used by default. This can be explicitly set via ``config[:enable_protection]``.
+* Environment-specific defaults added. The environment variable ``RACK_ENV`` is used to determine the current environment.
+  * Non-Development (Production, Test, etc)
+    * ``config[:static_dir] = false``
+  * Development
+    * ``config[:show_exceptions] = true``
+    * ``config[:logger] = Logger.new(STDOUT)``
+    * Add developer-friendly 404 error page. This is applied as an after filter, and won't have any effect if the response body is set.
+* ``absolute`` method now returns forward slash if script name is empty.
+
 ### v0.6
 * ``view_config`` options hash renamed to ``render_defaults`` which better reflects its function.
 
@@ -72,5 +83,5 @@ Unlikely
 --------
 * Mutex locking option? I'm of the opinion that the web server should be configured for the concurrency model of the application, rather than the framework.
 
-    
+
 More things will be added to these lists as they're thought of and considered.

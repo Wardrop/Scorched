@@ -11,7 +11,9 @@ module Scorched
     config << {
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
       :static_dir => 'public', # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
-      :logger => Logger.new(STDOUT)
+      :logger => nil,
+      :show_exceptions => false,
+      :enable_protection => true
     }
     
     render_defaults << {
@@ -19,6 +21,13 @@ module Scorched
       :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
       :engine => :erb
     }
+    
+    if ENV['RACK_ENV'] = 'development'
+      config[:logger] = Logger.new(STDOUT)
+      config[:show_exceptions] = true
+    else
+      config[:static_dir] = false
+    end
     
     conditions << {
       charset: proc { |charsets|
@@ -56,6 +65,10 @@ module Scorched
     }
     
     class << self
+      
+      def configure(env = nil)
+        
+      end
 
       def mappings
         @mappings ||= []
@@ -381,11 +394,12 @@ module Scorched
     # Example: absolute('/style.css') #=> /myapp/style.css
     def absolute(path = nil)
       return path if path && URI.parse(path).scheme
-      if path
+      return_path = if path
         [request.script_name, path].join('/').gsub(%r{/+}, '/')
       else
         request.script_name
       end
+      return_path[0] == '/' ? return_path : return_path.insert(0, '/')
     end
     
   private
@@ -398,6 +412,12 @@ module Scorched
           instance_exec(&f[:proc])
         end
       end
+    end
+    
+    def log(type, message)
+      config[:logger].progname ||= 'Scorched'
+      type = Logger.const_get(type.to_s.upcase)
+      config[:logger].add(type, message)
     end
   end
 end

@@ -662,51 +662,61 @@ module Scorched
       end
       
       describe "url helpers" do
-        let(:myapp) do
+        let(:my_app) do
+          Class.new(Scorched::Controller)
+        end
+        
+        let(:root_app) do
           Class.new(Scorched::Controller)
         end
         
         let(:app) do
-          the_app = myapp
+          this = self
           builder = Rack::Builder.new
-          builder.map('/myapp') { run the_app }
+          builder.map('/myapp') { run this.my_app }
+          builder.map('/') { run this.root_app }
           builder.to_app
         end
         
         describe "url" do
           it "returns the fully qualified URL" do
-            myapp.get('/') { url }
+            my_app.get('/') { url }
             rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
               'https://scorchedrb.com:73/myapp'
           end
           
           it "can append an optional path" do
-            myapp.get('/') { url('hello') }
+            my_app.get('/') { url('hello') }
             rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
               'https://scorchedrb.com:73/myapp/hello'
           end
           
           it "returns the given URL if scheme detected" do
             test_url = 'http://google.com/blah'
-            myapp.get('/') { url(test_url) }
+            my_app.get('/') { url(test_url) }
             rt.get('/myapp').body.should == test_url
           end
         end
         
         describe "absolute" do
           it "returns an absolute URL path" do
-            myapp.get('/absolute') { absolute }
+            my_app.get('/absolute') { absolute }
             rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp'
           end
           
+          it "returns a forward slash if script name is the root of the URL path" do
+            root_app.get('/') { absolute }
+            rt.get('http://scorchedrb.com').body.should == '/'
+          end
+          
           it "can append an optional path" do
-            myapp.get('/absolute') { absolute('hello') }
+            my_app.get('/absolute') { absolute('hello') }
             rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp/hello'
           end
           
           it "returns the given URL if scheme detected" do
             test_url = 'http://google.com/blah'
-            myapp.get('/') { absolute(test_url) }
+            my_app.get('/') { absolute(test_url) }
             rt.get('/myapp').body.should == test_url
           end
         end
