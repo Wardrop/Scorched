@@ -11,7 +11,7 @@ Changelog
   * Development
     * ``config[:show_exceptions] = true``
     * ``config[:logger] = Logger.new(STDOUT)``
-    * Add developer-friendly 404 error page. This is applied as an after filter, and won't have any effect if the response body is set.
+    * Add developer-friendly 404 error page. This is implemented as an after filter, and won't have any effect if the response body is set.
 * ``absolute`` method now returns forward slash if script name is empty.
 
 ### v0.6
