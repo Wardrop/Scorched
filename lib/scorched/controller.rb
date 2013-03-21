@@ -398,34 +398,35 @@ module Scorched
       return_path[0] == '/' ? return_path : return_path.insert(0, '/')
     end
     
-
-    after do
-      if response.empty?
-        <<-HTML
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style type="text/css">
-             @import url(http://fonts.googleapis.com/css?family=Titillium+Web|Open+Sans:300italic,400italic,700italic,400,700,300);
-              html, body { height: 100%; width: 100%; margin: 0; font-family: 'Open Sans', 'Lucida Sans', 'Arial'; }
-              body { color: #333; display: table; }
-              #container { display: table-cell; vertical-align: middle; text-align: center; }
-              #container > * { display: inline-block; text-align: center; vertical-align: middle; }
-              #logo {
-                padding: 12px 24px 12px 120px; color: white; background: rgb(191, 64, 0);
-                font-family: 'Titillium Web', 'Lucida Sans', 'Arial'; font-size: 36pt;  text-decoration: none;
-              }
-              h1 { margin-left: 18px; font-weight: 400; }
-            </style>
-          </head>
-          <body>
-            <div id="container">
-              <a id="logo" href="http://scorchedrb.com">Scorched</a>
-              <h1>404 Page Not Found</h1>
-            </div>
-          </body>
-          </html>
-        HTML
+    if ENV['RACK_ENV'] == 'development' && 
+      after do
+        if response.empty?
+          response.body = <<-HTML
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style type="text/css">
+               @import url(http://fonts.googleapis.com/css?family=Titillium+Web|Open+Sans:300italic,400italic,700italic,400,700,300);
+                html, body { height: 100%; width: 100%; margin: 0; font-family: 'Open Sans', 'Lucida Sans', 'Arial'; }
+                body { color: #333; display: table; }
+                #container { display: table-cell; vertical-align: middle; text-align: center; }
+                #container > * { display: inline-block; text-align: center; vertical-align: middle; }
+                #logo {
+                  padding: 12px 24px 12px 120px; color: white; background: rgb(191, 64, 0);
+                  font-family: 'Titillium Web', 'Lucida Sans', 'Arial'; font-size: 36pt;  text-decoration: none;
+                }
+                h1 { margin-left: 18px; font-weight: 400; }
+              </style>
+            </head>
+            <body>
+              <div id="container">
+                <a id="logo" href="http://scorchedrb.com">Scorched</a>
+                <h1>404 Page Not Found</h1>
+              </div>
+            </body>
+            </html>
+          HTML
+        end
       end
     end
 

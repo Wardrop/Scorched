@@ -206,6 +206,14 @@ module Scorched
         rt.get('/dog').status.should == 404
         rt.get('/').status.should == 200
       end
+      
+      it "leaves body empty if nil is returned" do
+        app.get('/') { }
+        app.after do
+          response.body.should == []
+        end
+        rt.get('/')
+      end
     end
     
     describe "sub-controllers" do

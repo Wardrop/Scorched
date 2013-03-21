@@ -17,7 +17,7 @@ module Scorched
     
     # Automatically wraps the assigned value in an array if it doesn't respond to ``each``.
     def body=(value)
-      super(value.respond_to?(:each) ? value : [value])
+      super(value.respond_to?(:each) ? value : [value].compact)
     end
     
     def finish(*args, &block)
