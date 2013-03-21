@@ -1,6 +1,7 @@
+ENV['RACK_ENV'] = 'production'
+
 require 'rack/test'
 require_relative '../lib/scorched.rb'
-
 
 module Scorched
   class SimpleCounter

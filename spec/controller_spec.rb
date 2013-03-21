@@ -459,8 +459,8 @@ module Scorched
     
     describe "configuration" do
       describe "strip_trailing_slash" do
-        it "is set to redirect by default" do
-          app.config[:strip_trailing_slash].should == :redirect
+        it "can be set to strip trailing slash and redirect" do
+          app.config[:strip_trailing_slash] = :redirect
           app.get('/test') { }
           response = rt.get('/test/')
           response.status.should == 307
@@ -486,8 +486,8 @@ module Scorched
       end
       
       describe "static_dir" do
-        it "is set to serve static files from 'public' directory by default" do
-          app.config[:static_dir].should == 'public'
+        it "can serve static file from the specific directory" do
+          app.config[:static_dir] = 'public'
           response = rt.get('/static.txt')
           response.status.should == 200
           response.body.should == 'My static file!'
@@ -500,228 +500,246 @@ module Scorched
         end
       end
       
-      describe "sessions" do
-        it "provides convenience method for accessing the Rack session" do
-          rack_session = nil
-          app.get('/') { rack_session = session }
-          rt.get('/')
-          rack_session.should be_nil
-          app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
-          rt.get('/')
-          rack_session.should be_a(Rack::Session::Abstract::SessionHash)
+      describe "show_exceptions" do
+        it "shows debug-friendly error page for unhandled exceptions" do
+          app.config[:show_exceptions] = true
+          app.get('/') { raise RuntimeError, "Kablamo!" }
+          response = rt.get('/')
+          response.status.should == 500
+          response.body.should include('Rack::ShowExceptions')
         end
         
-        describe "flash" do
-          before(:each) do
-            app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
-          end
-          
-          it "keeps session variables that live for one page load" do
-            app.get('/set') { flash[:cat] = 'meow' }
-            app.get('/get') { flash[:cat] }
-            
-            rt.get('/set')
-            rt.get('/get').body.should == 'meow'
-            rt.get('/get').body.should == ''
-          end
-          
-          it "always reads from the original request flash" do
-            app.get('/') do
-              flash[:counter] = flash[:counter] ? flash[:counter] + 1 : 0
-              flash[:counter].to_s
-            end
-            
-            rt.get('/').body.should == ''
-            rt.get('/').body.should == '0'
-            rt.get('/').body.should == '1'
-          end
-          
-          it "can only remove flash variables if the flash object is accessed" do
-            app.get('/set') { flash[:cat] = 'meow' }
-            app.get('/get') { flash[:cat] }
-            app.get('/null') { }
-            
-            rt.get('/set')
-            rt.get('/null')
-            rt.get('/get').body.should == 'meow'
-            rt.get('/get').body.should == ''
-          end
-          
-          it "can keep multiple sets of flash session variables" do
-            app.get('/set_animal') { flash(:animals)[:cat] = 'meow' }
-            app.get('/get_animal') { flash(:animals)[:cat] }
-            app.get('/set_name') { flash(:names)[:jeff] = 'male' }
-            app.get('/get_name') { flash(:names)[:jeff] }
-            
-            rt.get('/set_animal')
-            rt.get('/set_name')
-            rt.get('/get_animal').body.should == 'meow'
-            rt.get('/get_name').body.should == 'male'
-            rt.get('/get_animal').body.should == ''
-            rt.get('/get_name').body.should == ''
-          end
+        it "can be disabled" do
+          app.config[:show_exceptions] = false
+          app.get('/') { raise RuntimeError, "Kablamo!" }
+          expect {
+            response = rt.get('/')
+          }.to raise_error(RuntimeError)
         end
       end
-      
-      describe "cookie helper" do
-        it "sets, retrieves and deletes cookies" do
-          app.get('/') { cookie :test }
-          app.post('/') { cookie :test, 'hello' }
-          app.post('/goodbye') { cookie :test, {value: 'goodbye', expires: Time.now() + 999999 } }
-          app.delete('/') { cookie :test, nil }
-          app.delete('/alt') { cookie :test, {value: nil} }
-          
-          rt.get('/').body.should == ''
-          rt.post('/')
-          rt.get('/').body.should == 'hello'
-          rt.post('/goodbye')
-          rt.get('/').body.should == 'goodbye'
-          rt.delete('/')
-          rt.get('/').body.should == ''
-          rt.delete('/alt')
-          rt.get('/').body.should == ''
-        end
-      end
-      
-      describe "rendering" do
-        before(:each) do
-          app.render_defaults.each { |k,v| app.render_defaults[k] = nil }
-        end
-
-        it "can render a file, relative to the application root" do
-          app.get('/') do
-            render(:'views/main.erb').should == "3 for me"
-          end
-          rt.get('/')
-        end
-
-        it "can render a string" do
-          app.get('/') do
-            render('<%= 1 + 1  %> for you', engine: :erb).should == "2 for you"
-          end
-          rt.get('/')
-        end
-
-        it "takes an optional view directory, relative to the application root" do
-          app.get('/') do
-            render(:'main.erb', dir: 'views').should == "3 for me"
-          end
-          rt.get('/')
-        end
-
-        it "takes an optional block to be yielded by the view" do
-          app.get('/') do
-            render(:'views/layout.erb'){ "in the middle" }.should == "(in the middle)"
-          end
-          rt.get('/')
-        end
-
-        it "renders the given layout" do
-          app.get('/') do
-            render(:'views/main.erb', layout: :'views/layout.erb').should == "(3 for me)"
-          end
-          rt.get('/')
-        end
-
-        it "merges options with view config" do
-          app.get('/') do
-            render(:'main.erb').should == "3 for me"
-          end
-          app.get('/full_path') do
-            render(:'views/main.erb', {layout: :'views/layout.erb', dir: nil}).should == "(3 for me)"
-          end
-          app.render_defaults[:dir] = 'views'
-          rt.get('/')
-          rt.get('/full_path')
-        end
-
-        it "derived template engine overrides specified engine" do
-          app.render_defaults[:dir] = 'views'
-          app.render_defaults[:engine] = :erb
-          app.get('/str') do
-            render(:'other.str').should == "hello hello"
-          end
-          app.get('/erb_file') do
-            render(:main).should == "3 for me"
-          end
-          app.get('/erb_string') do
-            render('<%= 1 + 1  %> for you').should == "2 for you"
-          end
-          rt.get('/str')
-          rt.get('/erb_file')
-          rt.get('/erb_string')
-        end
-
-        it "ignores default layout when called within a view" do
-          app.render_defaults << {:dir => 'views', :layout => :layout, :engine => :erb}
-          app.get('/') do
-            render :composer
-          end
-          rt.get('/').body.should == '({1 for none})'
-        end
-      end
-      
-      describe "url helpers" do
-        let(:my_app) do
-          Class.new(Scorched::Controller)
-        end
-        
-        let(:root_app) do
-          Class.new(Scorched::Controller)
-        end
-        
-        let(:app) do
-          this = self
-          builder = Rack::Builder.new
-          builder.map('/myapp') { run this.my_app }
-          builder.map('/') { run this.root_app }
-          builder.to_app
-        end
-        
-        describe "url" do
-          it "returns the fully qualified URL" do
-            my_app.get('/') { url }
-            rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
-              'https://scorchedrb.com:73/myapp'
-          end
-          
-          it "can append an optional path" do
-            my_app.get('/') { url('hello') }
-            rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
-              'https://scorchedrb.com:73/myapp/hello'
-          end
-          
-          it "returns the given URL if scheme detected" do
-            test_url = 'http://google.com/blah'
-            my_app.get('/') { url(test_url) }
-            rt.get('/myapp').body.should == test_url
-          end
-        end
-        
-        describe "absolute" do
-          it "returns an absolute URL path" do
-            my_app.get('/absolute') { absolute }
-            rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp'
-          end
-          
-          it "returns a forward slash if script name is the root of the URL path" do
-            root_app.get('/') { absolute }
-            rt.get('http://scorchedrb.com').body.should == '/'
-          end
-          
-          it "can append an optional path" do
-            my_app.get('/absolute') { absolute('hello') }
-            rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp/hello'
-          end
-          
-          it "returns the given URL if scheme detected" do
-            test_url = 'http://google.com/blah'
-            my_app.get('/') { absolute(test_url) }
-            rt.get('/myapp').body.should == test_url
-          end
-        end
-      end
-      
     end
+    
+    describe "sessions" do
+      it "provides convenience method for accessing the Rack session" do
+        rack_session = nil
+        app.get('/') { rack_session = session }
+        rt.get('/')
+        rack_session.should be_nil
+        app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
+        rt.get('/')
+        rack_session.should be_a(Rack::Session::Abstract::SessionHash)
+      end
+      
+      describe "flash" do
+        before(:each) do
+          app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
+        end
+        
+        it "keeps session variables that live for one page load" do
+          app.get('/set') { flash[:cat] = 'meow' }
+          app.get('/get') { flash[:cat] }
+          
+          rt.get('/set')
+          rt.get('/get').body.should == 'meow'
+          rt.get('/get').body.should == ''
+        end
+        
+        it "always reads from the original request flash" do
+          app.get('/') do
+            flash[:counter] = flash[:counter] ? flash[:counter] + 1 : 0
+            flash[:counter].to_s
+          end
+          
+          rt.get('/').body.should == ''
+          rt.get('/').body.should == '0'
+          rt.get('/').body.should == '1'
+        end
+        
+        it "can only remove flash variables if the flash object is accessed" do
+          app.get('/set') { flash[:cat] = 'meow' }
+          app.get('/get') { flash[:cat] }
+          app.get('/null') { }
+          
+          rt.get('/set')
+          rt.get('/null')
+          rt.get('/get').body.should == 'meow'
+          rt.get('/get').body.should == ''
+        end
+        
+        it "can keep multiple sets of flash session variables" do
+          app.get('/set_animal') { flash(:animals)[:cat] = 'meow' }
+          app.get('/get_animal') { flash(:animals)[:cat] }
+          app.get('/set_name') { flash(:names)[:jeff] = 'male' }
+          app.get('/get_name') { flash(:names)[:jeff] }
+          
+          rt.get('/set_animal')
+          rt.get('/set_name')
+          rt.get('/get_animal').body.should == 'meow'
+          rt.get('/get_name').body.should == 'male'
+          rt.get('/get_animal').body.should == ''
+          rt.get('/get_name').body.should == ''
+        end
+      end
+    end
+    
+    describe "cookie helper" do
+      it "sets, retrieves and deletes cookies" do
+        app.get('/') { cookie :test }
+        app.post('/') { cookie :test, 'hello' }
+        app.post('/goodbye') { cookie :test, {value: 'goodbye', expires: Time.now() + 999999 } }
+        app.delete('/') { cookie :test, nil }
+        app.delete('/alt') { cookie :test, {value: nil} }
+        
+        rt.get('/').body.should == ''
+        rt.post('/')
+        rt.get('/').body.should == 'hello'
+        rt.post('/goodbye')
+        rt.get('/').body.should == 'goodbye'
+        rt.delete('/')
+        rt.get('/').body.should == ''
+        rt.delete('/alt')
+        rt.get('/').body.should == ''
+      end
+    end
+    
+    describe "rendering" do
+      before(:each) do
+        app.render_defaults.each { |k,v| app.render_defaults[k] = nil }
+      end
+
+      it "can render a file, relative to the application root" do
+        app.get('/') do
+          render(:'views/main.erb').should == "3 for me"
+        end
+        rt.get('/')
+      end
+
+      it "can render a string" do
+        app.get('/') do
+          render('<%= 1 + 1  %> for you', engine: :erb).should == "2 for you"
+        end
+        rt.get('/')
+      end
+
+      it "takes an optional view directory, relative to the application root" do
+        app.get('/') do
+          render(:'main.erb', dir: 'views').should == "3 for me"
+        end
+        rt.get('/')
+      end
+
+      it "takes an optional block to be yielded by the view" do
+        app.get('/') do
+          render(:'views/layout.erb'){ "in the middle" }.should == "(in the middle)"
+        end
+        rt.get('/')
+      end
+
+      it "renders the given layout" do
+        app.get('/') do
+          render(:'views/main.erb', layout: :'views/layout.erb').should == "(3 for me)"
+        end
+        rt.get('/')
+      end
+
+      it "merges options with view config" do
+        app.get('/') do
+          render(:'main.erb').should == "3 for me"
+        end
+        app.get('/full_path') do
+          render(:'views/main.erb', {layout: :'views/layout.erb', dir: nil}).should == "(3 for me)"
+        end
+        app.render_defaults[:dir] = 'views'
+        rt.get('/')
+        rt.get('/full_path')
+      end
+
+      it "derived template engine overrides specified engine" do
+        app.render_defaults[:dir] = 'views'
+        app.render_defaults[:engine] = :erb
+        app.get('/str') do
+          render(:'other.str').should == "hello hello"
+        end
+        app.get('/erb_file') do
+          render(:main).should == "3 for me"
+        end
+        app.get('/erb_string') do
+          render('<%= 1 + 1  %> for you').should == "2 for you"
+        end
+        rt.get('/str')
+        rt.get('/erb_file')
+        rt.get('/erb_string')
+      end
+
+      it "ignores default layout when called within a view" do
+        app.render_defaults << {:dir => 'views', :layout => :layout, :engine => :erb}
+        app.get('/') do
+          render :composer
+        end
+        rt.get('/').body.should == '({1 for none})'
+      end
+    end
+    
+    describe "url helpers" do
+      let(:my_app) do
+        Class.new(Scorched::Controller)
+      end
+      
+      let(:root_app) do
+        Class.new(Scorched::Controller)
+      end
+      
+      let(:app) do
+        this = self
+        builder = Rack::Builder.new
+        builder.map('/myapp') { run this.my_app }
+        builder.map('/') { run this.root_app }
+        builder.to_app
+      end
+      
+      describe "url" do
+        it "returns the fully qualified URL" do
+          my_app.get('/') { url }
+          rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
+            'https://scorchedrb.com:73/myapp'
+        end
+        
+        it "can append an optional path" do
+          my_app.get('/') { url('hello') }
+          rt.get('https://scorchedrb.com:73/myapp?something=true').body.should ==
+            'https://scorchedrb.com:73/myapp/hello'
+        end
+        
+        it "returns the given URL if scheme detected" do
+          test_url = 'http://google.com/blah'
+          my_app.get('/') { url(test_url) }
+          rt.get('/myapp').body.should == test_url
+        end
+      end
+      
+      describe "absolute" do
+        it "returns an absolute URL path" do
+          my_app.get('/absolute') { absolute }
+          rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp'
+        end
+        
+        it "returns a forward slash if script name is the root of the URL path" do
+          root_app.get('/') { absolute }
+          rt.get('http://scorchedrb.com').body.should == '/'
+        end
+        
+        it "can append an optional path" do
+          my_app.get('/absolute') { absolute('hello') }
+          rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp/hello'
+        end
+        
+        it "returns the given URL if scheme detected" do
+          test_url = 'http://google.com/blah'
+          my_app.get('/') { absolute(test_url) }
+          rt.get('/myapp').body.should == test_url
+        end
+      end
+    end
+
   end
 end

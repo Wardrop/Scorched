@@ -12,7 +12,7 @@ Gem::Specification.new 'scorched', Scorched::VERSION do |s|
   s.rdoc_options      = %w[--line-numbers --inline-source --title Scorched --encoding=UTF-8]
 
   s.add_dependency 'rack', '~> 1.4'
-  s.add_dependency 'rack-accept', '~> 0.4.5'
+  s.add_dependency 'rack-accept', '~> 0.4'
   s.add_dependency 'tilt', '~> 1.3'
   s.add_development_dependency 'rack-test', '~> 0.6'
   s.add_development_dependency 'rspec', '~> 2.9'

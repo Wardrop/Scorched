@@ -5,9 +5,8 @@ Changelog
 ---------
 ### v0.7
 * Logging preparations made. Now just have to decide on a logging strategy, such as what to log, how verbose the messages should be, etc.
-* Rack::Protection middleware is used by default. This can be explicitly set via ``config[:enable_protection]``.
 * Environment-specific defaults added. The environment variable ``RACK_ENV`` is used to determine the current environment.
-  * Non-Development (Production, Test, etc)
+  * Non-Development
     * ``config[:static_dir] = false``
   * Development
     * ``config[:show_exceptions] = true``
@@ -81,7 +80,8 @@ Some of these remaining features may be broken out into a separate contributor l
     
 Unlikely
 --------
-* Mutex locking option? I'm of the opinion that the web server should be configured for the concurrency model of the application, rather than the framework.
+* Mutex locking option - I'm of the opinion that the web server should be configured for the concurrency model of the application, rather than the framework.
+* Using Rack::Protection by default - The problem here is that a good portion of Rack::Protection involves sessions, and given that Scorched doesn't itself load any session middleware, these components of Rack::Protection would have to be excluded. I wouldn't want to invoke a false sense of security
 
 
 More things will be added to these lists as they're thought of and considered.

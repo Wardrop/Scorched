@@ -42,4 +42,4 @@ An DRY way to serve multiple content-types:
 Authentication and Permissions
 ------------------------------
 
-_Example coming soon._
+_Example coming soon I hope._

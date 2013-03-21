@@ -1,3 +1,3 @@
 module Scorched
-  VERSION = '0.7-alpha'
+  VERSION = '0.7'
 end

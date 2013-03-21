@@ -7,7 +7,7 @@ module Scorched
       [:[]=, :clear, :delete, :delete_if, :merge!, :replace, :shift, :store].include? m
     }
     
-    alias_method :<<, :replace
+    alias_method :<<, :_merge!
     
     # sets parent Options object and returns self
     def parent!(parent)
