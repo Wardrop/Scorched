@@ -34,7 +34,7 @@ Changelog
 * Added specs for each configuration option.
 * Using Ruby 2.0 features where applicable. No excuse not to be able to deploy on 2.0 by the time Scorched is ready for production.
     * Keyword arguments instead of ``*args`` combined with ``Hash === args.last``.
-    * Replaced instances of __FILE__ with __dir__.
+    * Replaced instances of ``__FILE__`` with ``__dir__``.
 * Added expected Rack middleware, Rack::MethodOverride and Rack::Head.
     
 ### v0.4
