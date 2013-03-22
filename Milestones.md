@@ -6,12 +6,12 @@ Changelog
 ### v0.7
 * Logging preparations made. Now just have to decide on a logging strategy, such as what to log, how verbose the messages should be, etc.
 * Environment-specific defaults added. The environment variable ``RACK_ENV`` is used to determine the current environment.
-  * Non-Development
-    * ``config[:static_dir] = false``
-  * Development
-    * ``config[:show_exceptions] = true``
-    * ``config[:logger] = Logger.new(STDOUT)``
-    * Add developer-friendly 404 error page. This is implemented as an after filter, and won't have any effect if the response body is set.
+    * Non-Development
+        * ``config[:static_dir] = false``
+    * Development
+        * ``config[:show_exceptions] = true``
+        * ``config[:logger] = Logger.new(STDOUT)``
+        * Add developer-friendly 404 error page. This is implemented as an after filter, and won't have any effect if the response body is set.
 * ``absolute`` method now returns forward slash if script name is empty.
 
 ### v0.6
@@ -30,11 +30,11 @@ Changelog
 * Added session method for convenience, and implemented helper for flash session data.
 * Added cookie helper for conveniently setting, retrieving and deleting cookies.
 * Static file serving actually works now
-  * Custom middleware Scorched::Static serves as a thin layer on top of Rack::File.
+    * Custom middleware Scorched::Static serves as a thin layer on top of Rack::File.
 * Added specs for each configuration option.
 * Using Ruby 2.0 features where applicable. No excuse not to be able to deploy on 2.0 by the time Scorched is ready for production.
-  * Keyword arguments instead of ``*args`` combined with ``Hash === args.last``.
-  * Replaced instances of __FILE__ with __dir__.
+    * Keyword arguments instead of ``*args`` combined with ``Hash === args.last``.
+    * Replaced instances of __FILE__ with __dir__.
 * Added expected Rack middleware, Rack::MethodOverride and Rack::Head.
     
 ### v0.4
@@ -45,7 +45,7 @@ Changelog
 * Basic request handling and routing
 * String and Regex URL matching, with capture support
 * Implemented route conditions
-  * Added HTTP method condition which the route helpers depend on.
+    * Added HTTP method condition which the route helpers depend on.
 * Added route helpers
 * Implemented support for sub-controllers
 * Implement before and after filters with proper execution order.
@@ -53,7 +53,7 @@ Changelog
 * Mechanism for including Rack middleware.
 * Added more route conditions e.g. content-type, language, user-agent, etc.
 * Provide means to `halt` request.
-  * Added redirect helping for halting and redirecting request
+    * Added redirect helping for halting and redirecting request
 * Mechanism for handling exceptions in routes and before/after filters.
 * Added static resource serving. E.g. public folder.
 
@@ -64,6 +64,7 @@ To Do
 Some of these remaining features may be broken out into a separate contributor library to keep the core lean and focused.
 
 * Make specs for Collection and Options classes more thorough, e.g. test all non-reading modifiers such as clear, delete, etc.
+* Implement template caching with option to disable/enable (disabled by default in development)
 * Add view helpers
   * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is
     intended to make link building easier.
