@@ -70,14 +70,6 @@ Some of these remaining features may be broken out into a separate contributor l
     intended to make link building easier.
   * Form populator implemented with Nokogiri. This would have to be added to a contrib library.
 * Add Verbose logging, including debug logging to show each routing hop and the current environment (variables, mode, etc)
-* Environment optimised defaults
-  * Production
-    * use Rack::Protection
-    * Disable static file serving. Sub-controllers can obviously override this. This will just change the default.
-  * Development
-    * Log to STDOUT
-    * use Rack::ShowExceptions
-    * Add developer-friendly 404 error page.
     
 Unlikely
 --------
