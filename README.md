@@ -10,23 +10,29 @@ Getting Started
 
 Install the canister...
 
-    gem install scorched
+```console
+$ gem install scorched
+```
 
 Open the valve...
 
-    # ruby
-    # hello_world.ru
-    require 'scorched'
-    class App < Scorched::Controller
-      get '/' do
-        'hello world'
-      end
-    end
-    run App
+```ruby
+# ruby
+# hello_world.ru
+require 'scorched'
+class App < Scorched::Controller
+  get '/' do
+    'hello world'
+  end
+end
+run App
+```
 
 And light the flame...
 
-    rackup hello_world.ru
+```console
+$ rackup hello_world.ru
+```
 
 _**Note**: Scorched requires Ruby 2.0 as it makes use of a couple of new features. By the time Scorched hits v1.0, there should be little reason not to be running Ruby 2.0._
 
@@ -54,42 +60,44 @@ Part of what keeps Scorched lightweight, is that unlike other lightweight web fr
 First Impressions
 -----------------
 
-    # ruby
-    class MyApp < Scorched::Controller
-      
-      # From the most simple route possible...
-      get '/' do
-        "Hello World"
-      end
-      
-      # To something that gets the muscle's flexing
-      route '/articles/:title/::opts', 2, methods: ['GET', 'POST'], content_type: :json do
-        # Do what you want in here. Note, the second argument is the optional route priority.
-      end
-      
-      # Anonymous controllers allow for convenient route grouping to which filters and conditions can be applied
-      controller conditions: {media_type: 'application/json'} do
-        get '/articles/*' do |page|
-          {title: 'Scorched Rocks', body: '...', created_at: '27/08/2012', created_by: 'Bob'}
-        end
-        
-        after do
-          response.body = response.body.to_json
-        end
-      end
-      
-      # The things you get for free by using Classes for Controllers (...that's directed at you Padrino)
-      def my_little_helper
-        # Do some crazy awesome stuff that no route can resist using.
-      end
-      
-      # You can always avoid the routing helpers and add mappings manually. Anything that responds to #call is a valid
-      # target, with the only minor exception being that proc's are instance_exec'd, not call'd.
-      self << {pattern: '/admin', priority: 10, target: My3rdPartyAdminApp}
-      self << {pattern: '**', conditions: {maintenance_mode: true}, target: proc { |env|
-        @request.body << 'Maintenance underway, please be patient.'
-      }}
+```ruby
+# ruby
+class MyApp < Scorched::Controller
+  
+  # From the most simple route possible...
+  get '/' do
+    "Hello World"
+  end
+  
+  # To something that gets the muscle's flexing
+  route '/articles/:title/::opts', 2, methods: ['GET', 'POST'], content_type: :json do
+    # Do what you want in here. Note, the second argument is the optional route priority.
+  end
+  
+  # Anonymous controllers allow for convenient route grouping to which filters and conditions can be applied
+  controller conditions: {media_type: 'application/json'} do
+    get '/articles/*' do |page|
+      {title: 'Scorched Rocks', body: '...', created_at: '27/08/2012', created_by: 'Bob'}
     end
+    
+    after do
+      response.body = response.body.to_json
+    end
+  end
+  
+  # The things you get for free by using Classes for Controllers (...that's directed at you Padrino)
+  def my_little_helper
+    # Do some crazy awesome stuff that no route can resist using.
+  end
+  
+  # You can always avoid the routing helpers and add mappings manually. Anything that responds to #call is a valid
+  # target, with the only minor exception being that proc's are instance_exec'd, not call'd.
+  self << {pattern: '/admin', priority: 10, target: My3rdPartyAdminApp}
+  self << {pattern: '**', conditions: {maintenance_mode: true}, target: proc { |env|
+    @request.body << 'Maintenance underway, please be patient.'
+  }}
+end
+```
 
 This API shouldn't look too foreign to anyone familiar with frameworks like Sinatra, and the potential power at hand should be obvious. The `route` method demonstrates a few minor features of Scorched:
 
