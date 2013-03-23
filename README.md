@@ -3,7 +3,7 @@
 
 Scorched is a generic, unopinionated, DRY, light-weight web framework for Ruby. It provides a generic yet powerful set of constructs for processing HTTP requests, with which websites and applications of almost any scale can be built.
 
-If you've used a light-weight DSL-based Ruby web framework before, such as a Sinatra, it should look familiar. Scorched is a true evolutionary enhancement of Sinatra, with more power, focus, and less clutter.
+If you've used a light-weight DSL-based Ruby web framework before, such as Sinatra, it should look familiar. Scorched is a true evolutionary enhancement of Sinatra, with more power, focus, and less clutter.
 
 Getting Started
 ---------------
@@ -33,7 +33,7 @@ And light the flame...
 $ rackup hello_world.ru
 ```
 
-_**Note**: Scorched requires Ruby 2.0 as it makes use of a couple of new features. By the time Scorched hits v1.0, there should be little reason not to be running Ruby 2.0._
+_**Note**: Scorched requires Ruby 2.0 as it makes use of a couple of new features. By the time Scorched hits v1.0, there will be little reason to not be deploying new projects on Ruby 2.0._
 
 The Errors of Our Past
 ----------------------
