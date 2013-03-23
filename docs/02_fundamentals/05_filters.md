@@ -1,6 +1,6 @@
 Filters
 =======
-Filters serve as a handy place to put functionality and behaviour that's common to a set of routes, or for that matter, a whole website or application. Filters are executed in the context of the controller; the same context as routes. Filters are also inheritable, meaning sub-classes inherit the filters of their parent - this inheritance is enabled through the use of the ``Scorched::Collection`` class, and is implemented such that each filter will only run once per-request.
+Filters serve as a handy place to put functionality and behaviour that's common to a set of routes, or for that matter, a whole website or application. Filters are executed in the context of the controller; the same context as routes. Filters are also inheritable, meaning sub-classes inherit the filters of their parent - this inheritance is enabled through the use of the `Scorched::Collection` class, and is implemented such that each filter will only run once per-request.
 
 There are currently two types of filter in Scorched, both of which are documented below.
 
@@ -9,24 +9,27 @@ Before and After Filters
 ------------------------
 Before and After filters allow pre- and post-processing of requests. They are executed before and after each request, respectively.
 
-    # ruby
-    before do
-      raise Error, "Must be logged in to access this site" unless session[:logged_in] == true
-    end
+```ruby
+before do
+  raise Error, "Must be logged in to access this site" unless session[:logged_in] == true
+end
+```
 
 Like routes, filters can have conditions defined on them, for example:
 
-    # ruby
-    after media_type: 'application/json' do
-      response.body.to_json!
-    end
+```ruby
+after media_type: 'application/json' do
+  response.body.to_json!
+end
+```
 
 Before and after filters run even if no route within the controller matches. This makes them suitable for handling 404 errors for example.
 
-    # ruby
-    after status: 404 do
-      response.body = render(:not_found)
-    end
+```ruby
+after status: 404 do
+  response.body = render(:not_found)
+end
+```
 
 Your imagination is the only limitation.
 
@@ -39,7 +42,8 @@ Error filters can handle exceptions raised from within the request target, as we
 
 Error filters can target only specific types of exception class, in much the same way as a typical Ruby rescue block.
 
-    # ruby
-    error PermissionError do |e|
-      flash[:error] = "You do not have the appropriate permission to perform that action: #{e.message}"
-    end
+```ruby
+error PermissionError do |e|
+  flash[:error] = "You do not have the appropriate permission to perform that action: #{e.message}"
+end
+```

@@ -17,7 +17,6 @@ $ gem install scorched
 Open the valve...
 
 ```ruby
-# ruby
 # hello_world.ru
 require 'scorched'
 class App < Scorched::Controller
@@ -61,7 +60,6 @@ First Impressions
 -----------------
 
 ```ruby
-# ruby
 class MyApp < Scorched::Controller
   
   # From the most simple route possible...

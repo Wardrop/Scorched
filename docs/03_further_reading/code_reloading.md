@@ -7,7 +7,7 @@ A sub-set of the most popular application reloaders are detailed below.
 
 Rerun
 -----
-Rerun is a general purpose gem (``gem install rerun``) for watching files and rerunning some command when any of those files change. The following example uses rerun to watch for changes to ".rb" and ".ru" files anywhere in the current directory tree. If a change is made, any previous instance of ``rackup`` are shutdown and restarted.
+Rerun is a general purpose gem (``gem install rerun``) for watching files and rerunning some command when any of those files change. The following example uses rerun to watch for changes to ".rb" and ".ru" files anywhere in the current directory tree. If a change is made, any previous instance of `rackup` are shutdown and restarted.
 
     rerun -p "**/*.{rb,ru}" rackup
 
@@ -21,4 +21,4 @@ Phusion Passenger
 -----------------
 The popular Apache/Nginx module for hosting Rack applications, Phusion Passenger, can be configured to reload your application on every request much like Shotgun does. Passenger can be faster that Shogun, as you can let the underlying web server (Apache or Nginx) to take care of the static file serving, which avoids having to reload your application for every static file request.
 
-To have Passenger automatically restart your application on every request, create a file named ``tmp/always_restart.txt`` in the root of your application directory. Passenger will automatically detect this file and behave as intended.
+To have Passenger automatically restart your application on every request, create a file named `tmp/always_restart.txt` in the root of your application directory. Passenger will automatically detect this file and behave as intended.

@@ -1,30 +1,30 @@
 Requests and Responses
 ======================
-One of the first things a controller does when it instantiates itself, is make the Rack environment hash accessible via the ``env`` helper, as well as make available a ``Scorched::Request`` and ``Scorched::Response`` object under the respective ``request`` and ``response`` methods.
+One of the first things a controller does when it instantiates itself, is make the Rack environment hash accessible via the `env` helper, as well as make available a `Scorched::Request` and `Scorched::Response` object under the respective `request` and `response` methods.
 
-The ``Scorched::Request`` and ``Scorched::Response`` classes are children of the corresponding _Rack_ request and response classes, with a little extra functionality tacked on.
+The `Scorched::Request` and `Scorched::Response` classes are children of the corresponding _Rack_ request and response classes, with a little extra functionality tacked on.
 
 The _request_ object makes accessible all the information associated with the current request, such as the GET and POST data, server and environment information, request headers, and so on. The _response_ is much the same, but in reverse. You'll use the _response_ object to set response headers and manipulate the body of the response.
 
-Refer to the _Rack_ documentation for more information on the ``Rack::Request`` and ``Rack::Response`` classes.
+Refer to the _Rack_ documentation for more information on the `Rack::Request` and `Rack::Response` classes.
 
 
 Scorched Extras
 ---------------
-As mentioned, Scorched tacks a few extras onto it's ``Scorched::Request`` and ``Scorched::Response`` classes. Most of these extras were added as a requirement of the Scorched controller, but they're just as useful to other developers.
+As mentioned, Scorched tacks a few extras onto it's `Scorched::Request` and `Scorched::Response` classes. Most of these extras were added as a requirement of the Scorched controller, but they're just as useful to other developers.
 
-Refer to the generated API documentation for ``Scorched::Request`` and ``Scorched::Response``.
+Refer to the generated API documentation for `Scorched::Request` and `Scorched::Response`.
 
 
 Halting Requests
 ----------------
-There may be instances we're you want to shortcut out-of processing the current request. The ``halt`` method allows you to do this, though it's worth clarifying its behaviour.
+There may be instances we're you want to shortcut out-of processing the current request. The `halt` method allows you to do this, though it's worth clarifying its behaviour.
 
-When ``halt`` is called within a route, it simply exists out of that route, and begins processing any _after_ filters. Halt can also be used within a _before_ or _after_ filter, in which case any remaining filters in the current controller are skipped.
+When `halt` is called within a route, it simply exists out of that route, and begins processing any _after_ filters. Halt can also be used within a _before_ or _after_ filter, in which case any remaining filters in the current controller are skipped.
 
-Calls to ``halt`` don't propagate up the controller chain. They're local to the controller. A call to ``halt`` is equivalent to doing a ``throw :halt``. Calling ``halt`` is often preferred though because as well as being shorter, it can take an optional argument to set the response status, which is something you typically want to do when halting a request.
+Calls to `halt` don't propagate up the controller chain. They're local to the controller. A call to `halt` is equivalent to doing a `throw :halt`. Calling `halt` is often preferred though because as well as being shorter, it can take an optional argument to set the response status, which is something you typically want to do when halting a request.
 
 
 Redirections
 ------------
-A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple ``redirect`` method which takes one argument - the URL to redirect to. Like ``halt`` it's mostly a convenience method. It sets the _Location_ header of the response before halting the request.
+A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple `redirect` method which takes one argument - the URL to redirect to. Like `halt` it's mostly a convenience method. It sets the _Location_ header of the response before halting the request.

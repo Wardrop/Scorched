@@ -5,17 +5,14 @@ Changelog
 ---------
 ### v0.7
 * Logging preparations made. Now just have to decide on a logging strategy, such as what to log, how verbose the messages should be, etc.
-* Environment-specific defaults added. The environment variable ``RACK_ENV`` is used to determine the current environment.
+* Environment-specific defaults added. The environment variable `RACK_ENV`s used to determine the current environment.
     * Non-Development
-        * ``config[:static_dir] = false``
-    * Development
-        * ``config[:show_exceptions] = true``
-        * ``config[:logger] = Logger.new(STDOUT)``
-        * Add developer-friendly 404 error page. This is implemented as an after filter, and won't have any effect if the response body is set.
-* ``absolute`` method now returns forward slash if script name is empty.
+        * `config[:static_dir] = false`   * Development
+        * `config[:show_exceptions] = true`       * `config[:logger] = Logger.new(STDOUT)`       * Add developer-friendly 404 error page. This is implemented as an after filter, and won't have any effect if the response body is set.
+* `absolute`ethod now returns forward slash if script name is empty.
 
 ### v0.6
-* ``view_config`` options hash renamed to ``render_defaults`` which better reflects its function.
+* `view_config`ptions hash renamed to ` `render_defaults`ch better reflects its function.
 
 ### v0.5.2
 * Minor modification to routing to make it behave as a documented regarding matching at the directly before or on a path.
@@ -33,9 +30,7 @@ Changelog
     * Custom middleware Scorched::Static serves as a thin layer on top of Rack::File.
 * Added specs for each configuration option.
 * Using Ruby 2.0 features where applicable. No excuse not to be able to deploy on 2.0 by the time Scorched is ready for production.
-    * Keyword arguments instead of ``*args`` combined with ``Hash === args.last``.
-    * Replaced instances of ``__FILE__`` with ``__dir__``.
-* Added expected Rack middleware, Rack::MethodOverride and Rack::Head.
+    * Keyword arguments instead of `*args`ombined with ` `Hash === args.last`  * Replaced instances of `__FILE__`ith ` `__dir__`Added expected Rack middleware, Rack::MethodOverride and Rack::Head.
     
 ### v0.4
 * Make filters behave like middleware. Inheritable, but are only executed once.

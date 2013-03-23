@@ -6,11 +6,12 @@ The only data exchanged between controllers is the Rack environment hash. Using 
 
 The Rack idiom is to namespace your keys, typically with your project name, using dots as delimiters. You can further group your keys using more dot-delimited namespaces. Perhaps an example is due:
 
-    # ruby
-    before user_agent: /MSIE|Windows/ do
-      env['myapp.dangerous_request'] = true
-    end
-    
-    get '/' do
-      "Welcome to #{env['myapp.settings.site_name']}!"
-    end
+```ruby
+before user_agent: /MSIE|Windows/ do
+  env['myapp.dangerous_request'] = true
+end
+
+get '/' do
+  "Welcome to #{env['myapp.settings.site_name']}!"
+end
+```
