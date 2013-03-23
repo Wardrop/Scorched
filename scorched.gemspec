@@ -11,6 +11,8 @@ Gem::Specification.new 'scorched', Scorched::VERSION do |s|
   s.test_files        = Dir.glob('spec/**/*_spec.rb')
   s.rdoc_options      = %w[--line-numbers --inline-source --title Scorched --encoding=UTF-8]
 
+  s.required_ruby_version = '>= 2.0.0'
+
   s.add_dependency 'rack', '~> 1.4'
   s.add_dependency 'rack-accept', '~> 0.4'
   s.add_dependency 'tilt', '~> 1.3'
