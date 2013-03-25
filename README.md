@@ -33,7 +33,9 @@ And light the flame...
 $ rackup hello_world.ru
 ```
 
-_**Note**: Scorched requires Ruby 2.0 as it makes use of a couple of new features. By the time Scorched hits v1.0, there will be little reason to not be deploying new projects on Ruby 2.0._
+#### A Note on Requirements
+
+Scorched requires Ruby 2.0 as it makes use of a few new features. It is however, important to ensure your version of Ruby 2.0 includes [changeset 39919](http://bugs.ruby-lang.org/projects/ruby-trunk/repository/revisions/39919) in order to avoid suffering from [random segmentation faults](http://bugs.ruby-lang.org/issues/8100). The first official patch release of 2.0.0 should include the fix, otherwise you can patch it during installation with RVM.
 
 The Errors of Our Past
 ----------------------
