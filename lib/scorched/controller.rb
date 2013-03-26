@@ -120,9 +120,9 @@ module Scorched
       #
       # It's worth noting, however obvious, that the resulting class will only be a controller if the parent class is
       # (or inherits from) a Scorched::Controller.
-      def controller(parent_class = self, **mapping, &block)
+      def controller(pattern = '/', parent_class = self, **mapping, &block)
         c = Class.new(parent_class, &block)
-        self << {pattern: '/', target: c}.merge(mapping)
+        self << {pattern: pattern, target: c}.merge(mapping)
         c
       end
       
@@ -193,35 +193,42 @@ module Scorched
     end
     
     def action
+      # We could implement this as a before block, but for effeciency and predticability, nip it in the bud ASAP.
+      # if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
+      #   response['Location'] = request.path.chomp('/')
+      #   response['status'] = 307
+      #   return response
+      # end
+      
       inner_error = nil
       rescue_block = proc do |e|
         raise unless filters[:error].any? do |f|
           (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) && check_conditions?(f[:conditions]) && instance_exec(e, &f[:proc])
         end
       end
-      
-      match = matches(true).first
+
       begin
         catch(:halt) do
           if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
             redirect(request.path.chomp('/'))
           end
-          
           run_filters(:before)
-          if match
-            request.breadcrumb << match
-            # Proc's are executed in the context of this controller instance.
-            target = match[:mapping][:target]
-            begin
-              catch(:halt) do
+          
+          begin
+            processed = false
+            matches.each do |match|
+              request.breadcrumb << match
+              processed = catch(:pass) {
+                target = match[:mapping][:target]
                 response.merge! (Proc === target) ? instance_exec(request.env, &target) : target.call(request.env)
-              end
-            rescue => inner_error
-              rescue_block.call(inner_error)
+              }
+              processed ? break : request.breadcrumb.pop
             end
-          else
-            response.status = 404
+            response.status = 404 unless processed
+          rescue => inner_error
+            rescue_block.call(inner_error)
           end
+
           run_filters(:after)
         end
       rescue => outer_error
@@ -279,6 +286,10 @@ module Scorched
     def halt(status = 200)
       response.status = status
       throw :halt
+    end
+    
+    def pass
+      throw :pass
     end
     
     # Convenience method for accessing Rack request.

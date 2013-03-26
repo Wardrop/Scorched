@@ -84,7 +84,7 @@ class App < Scorched::Controller
     end
   end
   
-  controller pattern: '/vip' do
+  controller '/vip' do
     get '/' do
       "<span class="warning">#{flash(:vip)[:warning]}</span>" if flash(:vip)[:warning]
     end

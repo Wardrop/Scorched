@@ -3,6 +3,11 @@ Milestones
 
 Changelog
 ---------
+### v0.8
+* Changed `controller` method signature to accept an optional URL pattern as the first argument.
+* Implemented a pass mechanism to short-circuit out of the current match and invoke the next match.
+* Sub-controllers mapped to `'/'` have an after filter automatically added for passing to the next match in the parent controller. Makes sub-controllers even more useful.
+
 ### v0.7
 * Logging preparations made. Now just have to decide on a logging strategy, such as what to log, how verbose the messages should be, etc.
 * Environment-specific defaults added. The environment variable `RACK_ENV`s used to determine the current environment.
@@ -58,6 +63,7 @@ To Do
 -----
 Some of these remaining features may be broken out into a separate contributor library to keep the core lean and focused.
 
+* Add specs for `pass`
 * Make specs for Collection and Options classes more thorough, e.g. test all non-reading modifiers such as clear, delete, etc.
 * Implement template caching with option to disable/enable (disabled by default in development)
 * Add view helpers

@@ -226,6 +226,20 @@ module Scorched
         response.body.should == 'hello'
       end
       
+      it "can be given a pattern" do
+        app.controller '/dog' do
+          get('/') { 'roof' }
+        end
+        response = rt.get('/dog')
+        response.status.should == 200
+        response.body.should == 'roof'
+      end
+      
+      it "inherits from parent class, or any other class" do
+        app.controller.superclass.should == app
+        app.controller('/', String).superclass.should == String
+      end
+      
       it "can take mapping options" do
         app.controller priority: -1, conditions: {methods: 'POST'} do
           route('/') { 'ok' }
@@ -236,15 +250,10 @@ module Scorched
       end
       
       it "should ignore the already matched portions of the path" do
-        app.controller pattern: '/article' do
+        app.controller '/article' do
           get('/*') { |title| title }
         end
         rt.get('/article/hello-world').body.should == 'hello-world'
-      end
-      
-      it "inherits from parent class, or any other class" do
-        app.controller.superclass.should == app
-        app.controller(String).superclass.should == String
       end
     end
     
@@ -419,7 +428,7 @@ module Scorched
           get '/'do
             request.env['scorched.simple_counter']
           end
-          controller pattern: '/sub_controller' do
+          controller '/sub_controller' do
             get '/' do
               request.env['scorched.simple_counter']
             end
@@ -452,16 +461,45 @@ module Scorched
         rt.get('/').status.should == 401
       end
       
-      it "still processes filters" do
+      it "skips processing filters" do
         app.after { response.status = 403 }
         app.get('/') { halt }
-        rt.get('/').status.should == 403
+        rt.get('/').status.should == 200
       end
       
       it "short circuits filters if halted within filter" do
         app.before { halt }
         app.after { response.status = 403 }
         rt.get('/').status.should == 200
+      end
+    end
+    
+    describe "passing" do
+      it "invokes the next match" do
+        app.get('/') { response.body << 'hello'; pass }
+        app.get('/') { response.body << ' there'; pass }
+        app.get('/') { response.body << ' sir' }
+        app.get('/') { response.body << '!' } # Shouldn't be hit
+        rt.get('/').body.should == 'hello there sir'
+      end
+      
+      it "invokes the next match in parent controller if passed from filter" do
+        app.controller '/sub' do
+          after do
+            response.body << 'hello'
+            pass
+          end
+        end
+        app.get('/sub') { response.body << ' there' }
+        rt.get('/sub').body.should == 'hello there'
+      end
+      
+      it "passing within filter of root controller results in uncaught symbol" do
+        app.before { pass }
+        expect {
+          app.get('/') { }
+          rt.get('/')
+        }.to raise_error(ArgumentError)
       end
     end
     

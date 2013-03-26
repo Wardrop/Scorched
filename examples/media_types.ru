@@ -11,13 +11,13 @@ class MediaTypesExample < Scorched::Controller
     HTML
   end
   
-  controller pattern: '/*' do
+  controller '/*' do
     get '/*' do |*captures|
       request.breadcrumb.inspect
     end
   end
   
-  get '/,', media_type: 'application/json' do
+  get '/', media_type: 'application/json' do
     {name: 'John Falkon', age: 39, occupation: 'Carpet Cleaner'}.to_json
   end
   
