@@ -119,22 +119,43 @@ end
 
 The controller helper takes an optional URL pattern as it's first argument, an optional parent class as it's second, and finally a mapping hash as its third optional argument, where you can define a priority, conditions, or override the URL pattern. Of course, the `controller` helper takes a block as well, which defines the body of the new controller class.
 
-The optional URL pattern defaults to `'/'` which can be handy for grouping a set of routes. 
+The optional URL pattern defaults to `'/'` which means it's essentially a match-all mapping. In addition, the generated controller has `:auto_pass` set to `true` by default (refer to configuration documentation for more information). This is a handy combination for grouping a set of routes in their own scope, with their own methods, filters, configuration, etc. 
 
 ``` ruby
 class MyApp < Scorched::Controller
   get '/' do
-    bold "Hello there"
+    format "Hello there"
   end
   
-  controller conditions: {media_type: 'application/json'} do
-   
+  controller do 
+    before { response['Content-Type'] = 'text/plain' }
+  
+    get '/hello' do
+      'Hello'
+    end
+    
+    def emphasise(str)
+      "**#{str}**"
+    end
+  end
+  
+  get '/goodbye' do
+   'Goodbye'
+  end
+  
+  after { response.body = emphasise(response.body.join) }
+  
+  def emphasise(str)
+    "<strong>#{str}</strong>"
   end
 end
 ```
+
+That example, while serving no practical purpose, hopefully demonstrates how you can combine various constructs with sub-controllers, to come up with DRY creative solutions.
+
 
 The Root Controller
 -------------------
 Although you will likely have a main controller to serve as the target for Rack, Scorched does not have the concept of a root controller. It mades no differentiation between a sub-controller and any other controller. All Controllers are made equal.
 
-You can arrange and nest your controllers in any way, shape or form. Scorched has been designed to not make any assumptions about how you structure your controllers, which can accommodate very creative solutions.
+You can arrange and nest your controllers in any way, shape or form. Scorched has been designed to not make any assumptions about how you structure your controllers, which again, can accommodate very creative solutions.
