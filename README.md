@@ -110,3 +110,12 @@ This API shouldn't look too foreign to anyone familiar with frameworks like Sina
 Development Progress
 --------------------
 Please refer to [Milestones.md](Milestones.md) for a breakdown of development progress.
+
+
+Links
+-----
+* [Website](http://scorchedrb.com)
+* [Online API Reference](http://rubydoc.info/gems/scorched)
+* [GitHub Project](http://github.com/wardrop/Scorched)
+* [Issue Tracker](http://github.com/wardrop/Scorched/issues)
+* [Discussion/Mailing List](https://groups.google.com/d/forum/scorched)
