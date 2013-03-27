@@ -25,6 +25,11 @@ When `halt` is called within a route, it simply exists out of that route, and be
 Calls to `halt` don't propagate up the controller chain. They're local to the controller. A call to `halt` is equivalent to doing a `throw :halt`. Calling `halt` is often preferred though because as well as being shorter, it can take an optional argument to set the response status, which is something you typically want to do when halting a request.
 
 
+Passing Requests
+----------------
+A route may _pass_ a request to the next matching route. _passing_ is very similar to halting, except an opportunity is given to other matching routes to fulfil the request. This is implemented as a throw/catch mechanism, much the same as `halt`. You can do a `throw :pass` manually, or use the helper method `pass`.
+
+
 Redirections
 ------------
 A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple `redirect` method which takes one argument - the URL to redirect to. Like `halt` it's mostly a convenience method. It sets the _Location_ header of the response before halting the request.

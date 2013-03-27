@@ -217,43 +217,57 @@ module Scorched
     end
     
     describe "sub-controllers" do
-      it "can be given no arguments" do
-        app.controller do
-          get('/') { 'hello' }
-        end
-        response = rt.get('/')
-        response.status.should == 200
-        response.body.should == 'hello'
-      end
-      
-      it "can be given a pattern" do
-        app.controller '/dog' do
-          get('/') { 'roof' }
-        end
-        response = rt.get('/dog')
-        response.status.should == 200
-        response.body.should == 'roof'
-      end
-      
-      it "inherits from parent class, or any other class" do
-        app.controller.superclass.should == app
-        app.controller('/', String).superclass.should == String
-      end
-      
-      it "can take mapping options" do
-        app.controller priority: -1, conditions: {methods: 'POST'} do
-          route('/') { 'ok' }
-        end
-        app.mappings.first[:priority].should == -1
-        rt.get('/').status.should == 404
-        rt.post('/').body.should == 'ok'
-      end
-      
       it "should ignore the already matched portions of the path" do
-        app.controller '/article' do
+        app << {pattern: '/article', target: Class.new(Scorched::Controller) do
           get('/*') { |title| title }
-        end
+        end}
         rt.get('/article/hello-world').body.should == 'hello-world'
+      end
+      
+      describe "controller helper" do
+        it "can be given no arguments" do
+          app.controller do
+            get('/') { 'hello' }
+          end
+          response = rt.get('/')
+          response.status.should == 200
+          response.body.should == 'hello'
+        end
+      
+        it "can be given a pattern" do
+          app.controller '/dog' do
+            get('/') { 'roof' }
+          end
+          response = rt.get('/dog')
+          response.status.should == 200
+          response.body.should == 'roof'
+        end
+      
+        it "inherits from parent class, or any other class" do
+          app.controller.superclass.should == app
+          app.controller('/', String).superclass.should == String
+        end
+      
+        it "can take mapping options" do
+          app.controller priority: -1, conditions: {methods: 'POST'} do
+            route('/') { 'ok' }
+          end
+          app.mappings.first[:priority].should == -1
+          rt.get('/').status.should == 404
+          rt.post('/').body.should == 'ok'
+        end
+        
+        it "automatically passes to the outer controller when no match" do
+          filters_run = 0
+          app.controller do
+            before { filters_run += 1 }
+            get('/sub') { 'goodbye' }
+            after { filters_run += 1 }
+          end
+          app.get('/') { 'hello' }
+          rt.get('/').body.should == 'hello'
+          filters_run.should == 0
+        end
       end
     end
     
@@ -320,7 +334,10 @@ module Scorched
         example "before filters run from outermost to inner" do
           order = []
           app.before { order << :outer }
-          app.controller { before { order << :inner } }
+          app.controller do
+            before { order << :inner }
+            get('/') { }
+          end
           rt.get('/')
           order.should == [:outer, :inner]
         end
@@ -328,7 +345,10 @@ module Scorched
         example "after filters run from innermost to outermost" do
           order = []
           app.after { order << :outer }
-          app.controller { after { order << :inner } }
+          app.controller do
+            get('/') { }
+            after { order << :inner }
+          end
           rt.get('/')
           order.should == [:inner, :outer]
         end
@@ -485,6 +505,7 @@ module Scorched
       
       it "invokes the next match in parent controller if passed from filter" do
         app.controller '/sub' do
+          get('/') { }
           after do
             response.body << 'hello'
             pass
@@ -561,6 +582,27 @@ module Scorched
           expect {
             response = rt.get('/')
           }.to raise_error(RuntimeError)
+        end
+      end
+      
+      describe "auto_pass" do
+        it "if no match, passes to the outer controller without running any filters" do
+          sub = Class.new(Scorched::Controller) do
+            config[:auto_pass] = true
+            before { response.status = 600 }
+            get('/hello') { 'hello' }
+            after { response.status = 600 }
+          end
+          app << {pattern: '/', target: sub}
+          app.get('/') { 'ok' }
+          rt.get('/').body.should == 'ok'
+          rt.get('/').status.should == 200
+          rt.get('/hello').body.should == 'hello'
+          rt.get('/hello').status.should == 600
+          
+          sub.config[:auto_pass] = false
+          rt.get('/').body.should == ''
+          rt.get('/').status.should == 600
         end
       end
     end

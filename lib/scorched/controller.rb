@@ -12,7 +12,8 @@ module Scorched
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
       :static_dir => 'public', # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
       :logger => nil,
-      :show_exceptions => false
+      :show_exceptions => false,
+      :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
     }
     
     render_defaults << {
@@ -114,14 +115,15 @@ module Scorched
       # Creates a new controller as a sub-class of self (by default), mapping it to self using the provided mapping
       # hash if one is provided. Returns the new anonymous controller class.
       #
-      # Takes two optional arguments and a block: a parent class from which the generated controller class inherits
-      # from, a mapping hash to automatically map the new controller, and of course a block which defines the
+      # Takes three optional arguments and a block: a pattern, a parent class from which the generated controller class 
+      # inherits from, a mapping hash for setting conditions and so on, and of course a block which defines the
       # controller class.
       #
       # It's worth noting, however obvious, that the resulting class will only be a controller if the parent class is
       # (or inherits from) a Scorched::Controller.
       def controller(pattern = '/', parent_class = self, **mapping, &block)
         c = Class.new(parent_class, &block)
+        c.config[:auto_pass] = true if parent_class < Scorched::Controller
         self << {pattern: pattern, target: c}.merge(mapping)
         c
       end
@@ -193,13 +195,6 @@ module Scorched
     end
     
     def action
-      # We could implement this as a before block, but for effeciency and predticability, nip it in the bud ASAP.
-      # if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
-      #   response['Location'] = request.path.chomp('/')
-      #   response['status'] = 307
-      #   return response
-      # end
-      
       inner_error = nil
       rescue_block = proc do |e|
         raise unless filters[:error].any? do |f|
@@ -212,11 +207,16 @@ module Scorched
           if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
             redirect(request.path.chomp('/'))
           end
-          run_filters(:before)
           
+          all_matches = matches
+          if all_matches.empty?
+            pass if config[:auto_pass]
+            response.status = 404
+          end
+          
+          run_filters(:before)
           begin
-            processed = false
-            matches.each do |match|
+            all_matches.each do |match|
               request.breadcrumb << match
               processed = catch(:pass) {
                 target = match[:mapping][:target]
@@ -224,11 +224,9 @@ module Scorched
               }
               processed ? break : request.breadcrumb.pop
             end
-            response.status = 404 unless processed
           rescue => inner_error
             rescue_block.call(inner_error)
           end
-
           run_filters(:after)
         end
       rescue => outer_error

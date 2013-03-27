@@ -119,7 +119,7 @@ end
 
 The controller helper takes an optional URL pattern as it's first argument, an optional parent class as it's second, and finally a mapping hash as its third optional argument, where you can define a priority, conditions, or override the URL pattern. Of course, the `controller` helper takes a block as well, which defines the body of the new controller class.
 
-The optional URL pattern defaults to `'/'` which can be handy for grouping a set of routes. Just remember that once a controller is given control, it won't match any routes in the parent controller, even if no routes end up matching in the child controller.
+The optional URL pattern defaults to `'/'` which can be handy for grouping a set of routes. 
 
 ``` ruby
 class MyApp < Scorched::Controller

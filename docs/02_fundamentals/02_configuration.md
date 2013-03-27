@@ -3,12 +3,12 @@ Configuration
 
 Scorched includes a few configurable options out of the box. These all have common defaults, or are otherwise left intentionally blank to ensure the developer opts-in to any potentially undesirable or surprising behaviour.
 
-There are two sets of configurables. Those which apply to views, and everything else. Each set of configuration options is a `Scorched::Options` instance. This allows configuration options to be inherited and subsequently overriden by child classes. This is handy in many instances, but a common requirement might be to change the view directory or default layout of some sub-controller.
+There are two sets of configurables. Those which apply to views, and everything else. Each set of configuration options is a `Scorched::Options` instance. This allows configuration options to be inherited and subsequently overridden by child classes. This is handy in many instances, but a common requirement might be to change the view directory or default layout of some sub-controller.
 
 Options
 -------
 
-Each configuration is listed below, with the default value of each included.
+Each configuration is listed below, with the default value of each included. Note, environment specific defaults may override the default values below.
 
 * `config[:strip_trailing_slash] = :redirect`  
     Controls how trailing forward slashes in requests are handled.
@@ -18,6 +18,7 @@ Each configuration is listed below, with the default value of each included.
 * `config[:static_dir] = 'public'`  
     The directory Scorched should serve static files from. Should be set to false if the web server or some other middleware is serving static files.
 * `config[:logger] = Logger.new(STDOUT)` - Currently does nothing until logging is added to Scorched.
+* `config[:auto_pass] = false` -  If no routes within the current controller match, automatically _pass_ the request back to the outer controller without running any filters. This makes sub-controllers behave more like a kind-of route group.
 
 You can also configure the default options when rendering views by setting them on the `render_defaults` hash. The options specified here are merged with those provided when calling the `render` method, with the explicit options obviously taking precedence over the defaults.
 
