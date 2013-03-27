@@ -25,7 +25,7 @@ Changelog
 * `absolute`ethod now returns forward slash if script name is empty.
 
 ### v0.6
-* `view_config`ptions hash renamed to ` `render_defaults`ch better reflects its function.
+* `view_config` options hash renamed to ` `render_defaults`ch better reflects its function.
 
 ### v0.5.2
 * Minor modification to routing to make it behave as a documented regarding matching at the directly before or on a path.
