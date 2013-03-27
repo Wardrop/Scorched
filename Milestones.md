@@ -3,6 +3,13 @@ Milestones
 
 Changelog
 ---------
+### v0.9-pre
+* Refactored `render` method:
+    * All Scorched options are now keyword arguments, including `:locals` which was added as a proper render option.
+    * Scorched options are no longer passed through to Tilt.
+    * `:tilt` option added to allow options to be passed directly to Tilt, such as `:engine`
+    * Unrecognised options are still passed through to Tilt for convenience.
+
 ### v0.8
 * Changed `controller` method signature to accept an optional URL pattern as the first argument.
 * Implemented a pass mechanism to short-circuit out of the current match and invoke the next match.

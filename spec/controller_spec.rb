@@ -766,6 +766,35 @@ module Scorched
         end
         rt.get('/').body.should == '({1 for none})'
       end
+      
+      it "can pass local variables through to view" do
+        app.get '/' do
+          render '<%= var %>', engine: 'erb', dir: 'views', locals: {var: 'hello sailor'}
+        end
+        rt.get('/').body.should == 'hello sailor'
+      end
+      
+      it "provides a means for passing options directly to tilt" do
+        Tilt.register(Class.new(Tilt::ERBTemplate) do
+          def prepare
+            options[:engine].new if options[:engine]
+            super
+          end
+        end, 'test')
+        
+        app.get '/safe' do
+          render '<%= var %>', engine: 'test', dir: 'views', locals: {var: 'hello sailor'}
+          render '<%= var %>', engine: 'test', dir: 'views', locals: {var: 'hello sailor'}, tilt: {engine: Class.new}
+        end
+        rt.get('/safe').body.should == 'hello sailor'
+        
+        app.get '/boomer' do
+          render '<%= var %>', engine: 'test', dir: 'views', locals: {var: 'hello sailor'}, tilt: {engine: 'invalid'}
+        end
+        expect {
+          rt.get('/boomer')
+        }.to raise_error(NoMethodError)
+      end
     end
     
     describe "url helpers" do

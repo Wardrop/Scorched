@@ -10,7 +10,7 @@ module Scorched
     
     config << {
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
-      :static_dir => 'public', # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
+      :static_dir => false, # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
       :logger => nil,
       :show_exceptions => false,
       :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
@@ -19,12 +19,15 @@ module Scorched
     render_defaults << {
       :dir => 'views', # The directory containing all the view templates, relative to the current working directory.
       :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
-      :engine => :erb
+      :engine => :erb,
+      :locals => {},
+      :tilt => {}, # Options intended for Tilt. This gets around potentialkey name conflicts between Scorched and the renderer invoked by Tilt. For example, if you had to specify an `:engine` for the renderer, this allows you to do that without.
     }
     
     if ENV['RACK_ENV'] == 'development'
       config[:logger] = Logger.new(STDOUT)
       config[:show_exceptions] = true
+      config[:static_dir] = 'public'
     else
       config[:static_dir] = false
     end
@@ -351,30 +354,66 @@ module Scorched
     # given, the _:engine_ option must be set.
     #
     # Refer to Tilt documentation for a list of valid template engines.
-    def render(string_or_file, options = {}, &block)
-      options = render_defaults.merge(explicit_options = options)
-      engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[options[:engine]]
-      raise Error, "Invalid or undefined template engine: #{options[:engine].inspect}" unless engine
+    def render(
+      string_or_file,
+      dir: render_defaults[:dir],
+      layout: @_no_default_layout ? nil : render_defaults[:layout],
+      engine: render_defaults[:engine],
+      locals: render_defaults[:locals],
+      tilt: render_defaults[:tilt],
+      **options,
+      &block
+    )
+      tilt_options = options.merge(tilt || {})
+      tilt_engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[engine]
+      raise Error, "Invalid or undefined template engine: #{engine.inspect}" unless tilt_engine
       if Symbol === string_or_file
         file = string_or_file.to_s
-        file = file << ".#{options[:engine]}" unless derived_engine
-        file = File.join(options[:dir], file) if options[:dir]
+        file = file << ".#{engine}" unless derived_engine
+        file = File.join(dir, file) if dir
         # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
-        template = engine.new(nil, nil, options) { File.read(file) }
+        template = tilt_engine.new(nil, nil, tilt_options) { File.read(file) }
       else
-        template = engine.new(nil, nil, options) { string_or_file }
+        template = tilt_engine.new(nil, nil, tilt_options) { string_or_file }
       end
-      
+    
       # The following chunk of code is responsible for preventing the rendering of layouts within views.
-      options[:layout] = false if @_no_default_layout && !explicit_options[:layout]
       begin
         @_no_default_layout = true
-        output = template.render(self, options[:locals], &block)
+        output = template.render(self, locals, &block)
       ensure
         @_no_default_layout = false
       end
-      output = render(options[:layout], options.merge(layout: false)) { output } if options[:layout]
-      output
+      
+      if layout
+        render(layout, dir: dir, layout: false, engine: engine, locals: locals, tilt: tilt, **options) { output }
+      else
+        output
+      end
+    
+      # options = render_defaults.merge(explicit_options = options)
+      # engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[options[:engine]]
+      # raise Error, "Invalid or undefined template engine: #{options[:engine].inspect}" unless engine
+      # if Symbol === string_or_file
+      #   file = string_or_file.to_s
+      #   file = file << ".#{options[:engine]}" unless derived_engine
+      #   file = File.join(options[:dir], file) if options[:dir]
+      #   # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
+      #   template = engine.new(nil, nil, options) { File.read(file) }
+      # else
+      #   template = engine.new(nil, nil, options) { string_or_file }
+      # end
+      # 
+      # # The following chunk of code is responsible for preventing the rendering of layouts within views.
+      # options[:layout] = false if @_no_default_layout && !explicit_options[:layout]
+      # begin
+      #   @_no_default_layout = true
+      #   output = template.render(self, options[:locals], &block)
+      # ensure
+      #   @_no_default_layout = false
+      # end
+      # output = render(options[:layout], options.merge(layout: false)) { output } if options[:layout]
+      # output
     end
     
     # Takes an optional URL, relative to the applications root, and returns a fully qualified URL.

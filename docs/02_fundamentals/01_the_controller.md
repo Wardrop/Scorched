@@ -156,6 +156,6 @@ That example, while serving no practical purpose, hopefully demonstrates how you
 
 The Root Controller
 -------------------
-Although you will likely have a main controller to serve as the target for Rack, Scorched does not have the concept of a root controller. It mades no differentiation between a sub-controller and any other controller. All Controllers are made equal.
+Although you will likely have a main controller to serve as the target for Rack, Scorched does not have the concept of a root controller. It makes no differentiation between a sub-controller and any other controller. All Controllers are made equal.
 
-You can arrange and nest your controllers in any way, shape or form. Scorched has been designed to not make any assumptions about how you structure your controllers, which again, can accommodate very creative solutions.
+You can arrange and nest your controllers in any way, shape or form. Scorched has been designed to not make any assumptions about how you structure your controllers, which again, can accommodate creative solutions.
