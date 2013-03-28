@@ -1,4 +1,6 @@
 module Scorched
+  TemplateCache = Tilt::Cache.new
+  
   class Controller
     include Scorched::Options('config')
     include Scorched::Options('render_defaults')
@@ -14,6 +16,7 @@ module Scorched
       :logger => nil,
       :show_exceptions => false,
       :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
+      :cache_templates => true
     }
     
     render_defaults << {
@@ -28,8 +31,7 @@ module Scorched
       config[:logger] = Logger.new(STDOUT)
       config[:show_exceptions] = true
       config[:static_dir] = 'public'
-    else
-      config[:static_dir] = false
+      config[:cache_templates] = false
     end
     
     conditions << {
@@ -328,8 +330,9 @@ module Scorched
       env['scorched.flash'].each { |k,v| session[k] = v } if session && env['scorched.flash']
     end
     
-    # Serves a thin layer of convenience to Rack's built-in methods: Request#cookies, Response#set_cookie, and
+    # Serves as a thin layer of convenience to Rack's built-in methods: Request#cookies, Response#set_cookie, and
     # Response#delete_cookie.
+    #
     # If only one argument is given, the specified cookie is retreived and returned.
     # If both arguments are supplied, the cookie is either set or deleted, depending on whether the second argument is
     # nil, or otherwise is a hash containing the key/value pair ``:value => nil``.
@@ -349,11 +352,12 @@ module Scorched
     end
     
     # Renders the given string or file path using the Tilt templating library.
-    # The options hash is merged with the controllers _render_defaults_. Unrecognised options are passed through to Tilt. 
-    # The template engine is derived from file name, or otherwise as specified by the _:engine_ option. If a string is
-    # given, the _:engine_ option must be set.
+    # Each option defaults to the corresponding value defined in _render_defaults_ attribute. Unrecognised options are
+    # passed through to Tilt, but a `:tilt` option is also provided for passing options directly to Tilt.
+    # The template engine is derived from the file name, or otherwise as specified by the _:engine_ option. If a string
+    # is given, the _:engine_ option must be set.
     #
-    # Refer to Tilt documentation for a list of valid template engines.
+    # Refer to Tilt documentation for a list of valid template engines and Tilt options.
     def render(
       string_or_file,
       dir: render_defaults[:dir],
@@ -364,17 +368,22 @@ module Scorched
       **options,
       &block
     )
+      template_cache = config[:cache_templates] ? TemplateCache : Tilt::Cache.new
       tilt_options = options.merge(tilt || {})
       tilt_engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[engine]
       raise Error, "Invalid or undefined template engine: #{engine.inspect}" unless tilt_engine
-      if Symbol === string_or_file
+      template = if Symbol === string_or_file
         file = string_or_file.to_s
         file = file << ".#{engine}" unless derived_engine
         file = File.join(dir, file) if dir
         # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
-        template = tilt_engine.new(nil, nil, tilt_options) { File.read(file) }
+        template_cache.fetch(:file, tilt_engine, file, tilt_options) do
+          tilt_engine.new(nil, nil, tilt_options) { File.read(file) }
+        end
       else
-        template = tilt_engine.new(nil, nil, tilt_options) { string_or_file }
+        template_cache.fetch(:string, tilt_engine, string_or_file, tilt_options) do
+          tilt_engine.new(nil, nil, tilt_options) { string_or_file }
+        end
       end
     
       # The following chunk of code is responsible for preventing the rendering of layouts within views.
@@ -390,30 +399,6 @@ module Scorched
       else
         output
       end
-    
-      # options = render_defaults.merge(explicit_options = options)
-      # engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[options[:engine]]
-      # raise Error, "Invalid or undefined template engine: #{options[:engine].inspect}" unless engine
-      # if Symbol === string_or_file
-      #   file = string_or_file.to_s
-      #   file = file << ".#{options[:engine]}" unless derived_engine
-      #   file = File.join(options[:dir], file) if options[:dir]
-      #   # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
-      #   template = engine.new(nil, nil, options) { File.read(file) }
-      # else
-      #   template = engine.new(nil, nil, options) { string_or_file }
-      # end
-      # 
-      # # The following chunk of code is responsible for preventing the rendering of layouts within views.
-      # options[:layout] = false if @_no_default_layout && !explicit_options[:layout]
-      # begin
-      #   @_no_default_layout = true
-      #   output = template.render(self, options[:locals], &block)
-      # ensure
-      #   @_no_default_layout = false
-      # end
-      # output = render(options[:layout], options.merge(layout: false)) { output } if options[:layout]
-      # output
     end
     
     # Takes an optional URL, relative to the applications root, and returns a fully qualified URL.

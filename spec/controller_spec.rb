@@ -525,7 +525,7 @@ module Scorched
     end
     
     describe "configuration" do
-      describe "strip_trailing_slash" do
+      describe :strip_trailing_slash do
         it "can be set to strip trailing slash and redirect" do
           app.config[:strip_trailing_slash] = :redirect
           app.get('/test') { }
@@ -552,7 +552,7 @@ module Scorched
         end
       end
       
-      describe "static_dir" do
+      describe :static_dir do
         it "can serve static file from the specific directory" do
           app.config[:static_dir] = 'public'
           response = rt.get('/static.txt')
@@ -567,7 +567,7 @@ module Scorched
         end
       end
       
-      describe "show_exceptions" do
+      describe :show_exceptions do
         it "shows debug-friendly error page for unhandled exceptions" do
           app.config[:show_exceptions] = true
           app.get('/') { raise RuntimeError, "Kablamo!" }
@@ -585,8 +585,8 @@ module Scorched
         end
       end
       
-      describe "auto_pass" do
-        it "if no match, passes to the outer controller without running any filters" do
+      describe :auto_pass do
+        it "passes to the outer controller without running any filters, if no match" do
           sub = Class.new(Scorched::Controller) do
             config[:auto_pass] = true
             before { response.status = 600 }
@@ -603,6 +603,28 @@ module Scorched
           sub.config[:auto_pass] = false
           rt.get('/').body.should == ''
           rt.get('/').status.should == 600
+        end
+      end
+      
+      describe :cache_templates do
+        before(:each) do
+          File.open('views/temp.str', 'w') { |f| f.write 'hello world' }
+        end
+        
+        it "can cache templates" do
+          app.config[:cache_templates] = true
+          app.get('/') { render :'temp.str' }
+          rt.get('/').body.should == 'hello world'
+          File.open('views/temp.str', 'a') { |f| f.write '!!!' }
+          rt.get('/').body.should == 'hello world'
+        end
+        
+        it "can be set not to cache templates" do
+          app.config[:cache_templates] = false
+          app.get('/') { render :'temp.str' }
+          rt.get('/').body.should == 'hello world'
+          File.open('views/temp.str', 'a') { |f| f.write '!!!' }
+          rt.get('/').body.should == 'hello world!!!'
         end
       end
     end
