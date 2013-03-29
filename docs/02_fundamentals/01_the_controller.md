@@ -71,7 +71,7 @@ class ControllerA < Scorched::Controller
   end
 end
 
-class ControllerB < Scorched::Controller
+class ControllerB < ControllerA
   render_defaults[:layout] = :controller_b
   
   get '/', user: 'bob' do
