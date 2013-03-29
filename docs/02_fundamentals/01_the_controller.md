@@ -71,7 +71,7 @@ class ControllerA < Scorched::Controller
   end
 end
 
-class ControllerB < Scorched::Controller
+class ControllerB < ControllerA
   render_defaults[:layout] = :controller_b
   
   get '/', user: 'bob' do
@@ -117,7 +117,7 @@ class MyApp < Scorched::Controller
 end
 ```
 
-The controller helper takes an optional URL pattern as it's first argument, an optional parent class as it's second, and finally a mapping hash as its third optional argument, where you can define a priority, conditions, or override the URL pattern. Of course, the `controller` helper takes a block as well, which defines the body of the new controller class.
+The `controller` helper takes an optional URL pattern as it's first argument, an optional parent class as it's second, and finally a mapping hash as its third optional argument, where you can define a priority, conditions, or override the URL pattern. Of course, the `controller` helper takes a block as well, which defines the body of the new controller class.
 
 The optional URL pattern defaults to `'/'` which means it's essentially a match-all mapping. In addition, the generated controller has `:auto_pass` set to `true` by default (refer to configuration documentation for more information). This is a handy combination for grouping a set of routes in their own scope, with their own methods, filters, configuration, etc. 
 
