@@ -7,16 +7,18 @@ module Scorched
     include Scorched::Options('conditions')
     include Scorched::Collection('middleware')
     include Scorched::Collection('before_filters')
-    include Scorched::Collection('after_filters')
+    include Scorched::Collection('after_filters', true)
     include Scorched::Collection('error_filters')
     
     config << {
-      :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
-      :static_dir => false, # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
+      :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
+      :cache_templates => true,
       :logger => nil,
       :show_exceptions => false,
-      :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
-      :cache_templates => true
+      :show_http_error_pages => false, # If true, shows the default Scorched HTTP error page.
+      :static_dir => false, # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
+      :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
+      
     }
     
     render_defaults << {
@@ -32,14 +34,23 @@ module Scorched
       config[:show_exceptions] = true
       config[:static_dir] = 'public'
       config[:cache_templates] = false
+      config[:show_http_error_pages] = true
     end
     
     conditions << {
       charset: proc { |charsets|
         [*charsets].any? { |charset| request.env['rack-accept.request'].charset? charset }
       },
+      config: proc { |map|
+        map.all? { |k,v| config[k] == v }
+      },
       encoding: proc { |encodings|
         [*encodings].any? { |encoding| request.env['rack-accept.request'].encoding? encoding }
+      },
+      failed_condition: proc { |conditions|
+        if !matches.empty? && matches.all? { |m| m.failed_condition }
+          [*conditions].include? matches.first.failed_condition[0]
+        end
       },
       host: proc { |host| 
         (Regexp === host) ? host =~ request.host : host == request.host 
@@ -50,8 +61,14 @@ module Scorched
       media_type: proc { |types|
         [*types].any? { |type| request.env['rack-accept.request'].media_type? type }
       },
-      methods: proc { |accepts| 
-        [*accepts].include?(request.request_method)
+      method: proc { |methods| 
+        [*methods].include?(request.request_method)
+      },
+      matched: proc { |bool|
+        @_matched == bool
+      },
+      proc: proc { |*blocks|
+        [*blocks].all? { |b| instance_exec(&b) }
       },
       user_agent: proc { |user_agent| 
         (Regexp === user_agent) ? user_agent =~ request.user_agent : user_agent == request.user_agent 
@@ -146,7 +163,7 @@ module Scorched
       ['get', 'post', 'put', 'delete', 'head', 'options', 'patch'].each do |method|
         methods = (method == 'get') ? ['GET', 'HEAD'] : [method.upcase]
         define_method(method) do |*args, **conds, &block|
-          conds.merge!(methods: methods)
+          conds.merge!(method: methods)
           route(*args, **conds, &block)
         end
       end
@@ -187,6 +204,10 @@ module Scorched
       end
     end
     
+    after(failed_condition: :host) { response.status = 404 }
+    after(failed_condition: :method) { response.status = 405 }
+    after(failed_condition: %i{charset encoding language media_type}) { response.status = 406 }
+    
     def method_missing(method, *args, &block)
       (self.class.respond_to? method) ? self.class.__send__(method, *args, &block) : super
     end
@@ -203,7 +224,9 @@ module Scorched
       inner_error = nil
       rescue_block = proc do |e|
         raise unless filters[:error].any? do |f|
-          (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) && check_conditions?(f[:conditions]) && instance_exec(e, &f[:proc])
+          (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) &&
+          !check_for_failed_condition(f[:conditions]) &&
+          instance_exec(e, &f[:proc])
         end
       end
 
@@ -213,22 +236,22 @@ module Scorched
             redirect(request.path.chomp('/'))
           end
           
-          all_matches = matches
-          if all_matches.empty?
+          if matches.all? { |m| m.failed_condition }
             pass if config[:auto_pass]
-            response.status = 404
+            response.status = matches.empty? ? 404 : 403
           end
           
           run_filters(:before)
           begin
-            all_matches.each do |match|
+            @_matched = true == matches.each { |match|
+              next if match.failed_condition
               request.breadcrumb << match
-              processed = catch(:pass) {
-                target = match[:mapping][:target]
-                response.merge! (Proc === target) ? instance_exec(request.env, &target) : target.call(request.env)
+              break if catch(:pass) {
+                target = match.mapping[:target]
+                response.merge! (Proc === target) ? instance_exec(env, &target) : target.call(env)
               }
-              processed ? break : request.breadcrumb.pop
-            end
+              request.breadcrumb.pop
+            }
           rescue => inner_error
             rescue_block.call(inner_error)
           end
@@ -240,44 +263,37 @@ module Scorched
       response
     end
     
-    def match?
-      !matches(true).empty?
-    end
-    
-    # Finds mappings that match the currently unmatched portion of the request path, returning an array of all matches.
-    # If _short_circuit_ is set to true, it stops matching at the first positive match, returning only a single match.
-    def matches(short_circuit = false)
+    # Finds mappings that match the unmatched portion of the request path, returning an array of `Match` objects, or an
+    # empty array if no matches were found.
+    #
+    # The `:eligable` attribute of the `Match` object indicates whether the conditions for that mapping passed.
+    # The result is cached for the life time of the controller instance, for the sake of effecient-recalling.
+    def matches
+      return @matches if @matches
       to_match = request.unmatched_path
       to_match = to_match.chomp('/') if config[:strip_trailing_slash] == :ignore && to_match =~ %r{./$}
-      matches = []
-      mappings.each do |m|
-        m[:pattern].match(to_match) do |match_data|
+      @matches = mappings.map { |mapping|
+        mapping[:pattern].match(to_match) do |match_data|
           if match_data.pre_match == ''
-            if check_conditions?(m[:conditions])
-              if match_data.names.empty?
-                captures = match_data.captures
-              else
-                captures = Hash[match_data.names.map{|v| v.to_sym}.zip match_data.captures]
-              end
-              matches << {mapping: m, captures: captures, path: match_data.to_s}
-              break if short_circuit
+            if match_data.names.empty?
+              captures = match_data.captures
+            else
+              captures = Hash[match_data.names.map{|v| v.to_sym}.zip match_data.captures]
             end
+            Match.new(mapping, captures, match_data.to_s, check_for_failed_condition(mapping[:conditions]))
           end
         end
-      end
-      matches
+      }.compact
     end
     
-    def check_conditions?(conds)
-      if !conds
-        true
-      else
-        conds.all? { |c,v| check_condition?(c, v) }
-      end
+    # Tests the given conditions, returning the name of the first failed condition, or nil otherwise.
+    def check_for_failed_condition(conds)
+      (conds || []).find { |c,v| check_condition?(c, v) ? false : c }
     end
     
+    # Test the given condition, returning true if the condition passes, or false otherwise.
     def check_condition?(c, v)
-      raise Error, "The condition `#{c}` either does not exist, or is not a Proc object" unless Proc === self.conditions[c]
+      raise Error, "The condition `#{c}` either does not exist, or is not an instance of Proc" unless Proc === self.conditions[c]
       instance_exec(v, &self.conditions[c])
     end
     
@@ -330,7 +346,7 @@ module Scorched
       env['scorched.flash'].each { |k,v| session[k] = v } if session && env['scorched.flash']
     end
     
-    # Serves as a thin layer of convenience to Rack's built-in methods: Request#cookies, Response#set_cookie, and
+    # Serves as a thin layer of convenience to Rack's built-in method: Request#cookies, Response#set_cookie, and
     # Response#delete_cookie.
     #
     # If only one argument is given, the specified cookie is retreived and returned.
@@ -431,35 +447,33 @@ module Scorched
       return_path[0] == '/' ? return_path : return_path.insert(0, '/')
     end
     
-    if ENV['RACK_ENV'] == 'development' && 
-      after do
-        if response.empty?
-          response.body = <<-HTML
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <style type="text/css">
-               @import url(http://fonts.googleapis.com/css?family=Titillium+Web|Open+Sans:300italic,400italic,700italic,400,700,300);
-                html, body { height: 100%; width: 100%; margin: 0; font-family: 'Open Sans', 'Lucida Sans', 'Arial'; }
-                body { color: #333; display: table; }
-                #container { display: table-cell; vertical-align: middle; text-align: center; }
-                #container > * { display: inline-block; text-align: center; vertical-align: middle; }
-                #logo {
-                  padding: 12px 24px 12px 120px; color: white; background: rgb(191, 64, 0);
-                  font-family: 'Titillium Web', 'Lucida Sans', 'Arial'; font-size: 36pt;  text-decoration: none;
-                }
-                h1 { margin-left: 18px; font-weight: 400; }
-              </style>
-            </head>
-            <body>
-              <div id="container">
-                <a id="logo" href="http://scorchedrb.com">Scorched</a>
-                <h1>404 Page Not Found</h1>
-              </div>
-            </body>
-            </html>
-          HTML
-        end
+    after config: {show_http_error_pages: true}, status: 400..599 do
+      if response.empty?
+        response.body = <<-HTML
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style type="text/css">
+             @import url(http://fonts.googleapis.com/css?family=Titillium+Web|Open+Sans:300italic,400italic,700italic,400,700,300);
+              html, body { height: 100%; width: 100%; margin: 0; font-family: 'Open Sans', 'Lucida Sans', 'Arial'; }
+              body { color: #333; display: table; }
+              #container { display: table-cell; vertical-align: middle; text-align: center; }
+              #container > * { display: inline-block; text-align: center; vertical-align: middle; }
+              #logo {
+                padding: 12px 24px 12px 120px; color: white; background: rgb(191, 64, 0);
+                font-family: 'Titillium Web', 'Lucida Sans', 'Arial'; font-size: 36pt;  text-decoration: none;
+              }
+              h1 { margin-left: 18px; font-weight: 400; }
+            </style>
+          </head>
+          <body>
+            <div id="container">
+              <a id="logo" href="http://scorchedrb.com">Scorched</a>
+              <h1>#{response.status} #{Rack::Utils::HTTP_STATUS_CODES[response.status]}</h1>
+            </div>
+          </body>
+          </html>
+        HTML
       end
     end
 
@@ -467,9 +481,9 @@ module Scorched
   private
   
     def run_filters(type)
-      tracker = env['scorched.filters'] ||= {before: Set.new, after: Set.new}
+      tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
       filters[type].reject{ |f| tracker[type].include? f }.each do |f|
-        if check_conditions?(f[:conditions])
+        unless check_for_failed_condition(f[:conditions])
           tracker[type] << f
           instance_exec(&f[:proc])
         end

@@ -6,7 +6,7 @@ When Scorched receives a request, the first thing it does is iterate over it's i
 Mappings can be defined manually using the `map` class method, also aliased as `<<`. Besides the required URL pattern and target elements, a mapping can also define a priority, and one or more conditions. The example below demonstrates the use of all of them.
 
 ```ruby
-map pattern: '/', priority: -99, conditions: {methods: ['POST', 'PUT', 'DELETE']}, target: proc { |env|
+map pattern: '/', priority: -99, conditions: {method: ['POST', 'PUT', 'DELETE']}, target: proc { |env|
   [200, {}, 'Bugger off']
 }
 ```
@@ -26,7 +26,7 @@ route '/' do
   'Well hello there'
 end
 
-route '/*', 5, methods: ['POST', 'PUT', 'DELETE'] do |capture|
+route '/*', 5, method: ['POST', 'PUT', 'DELETE'] do |capture|
   "Hmm trying to change #{capture} I see"
 end
 ```
@@ -37,7 +37,7 @@ The first exception is that the pattern must match to the end of the request pat
 
 The other more notable exception is in how the given block is treated. The block given to the route helper is wrapped in another proc. The wrapping proc does a couple of things. It first sends all the captures in the url pattern as argument to the given block, this is shown in the example above. The other thing it does is takes care of assigning the return value to the body of the response.
 
-In the latter of the two examples above, a `:methods` condition defines what methods the route is intended to process. The first example has no such condition, so it accepts all HTTP methods. Typically however, a route will handle a single HTTP method, which is why Scorched also provides the convenience helpers: `get`, `post`, `put`, `delete`, `head`, `options`, and `patch`. These methods automatically define the corresponding `:method` condition, with the `get` helper also including `head` as an accepted HTTP method.
+In the latter of the two examples above, a `:method` condition defines what methods the route is intended to process. The first example has no such condition, so it accepts all HTTP methods. Typically however, a route will handle a single HTTP method, which is why Scorched also provides the convenience helpers: `get`, `post`, `put`, `delete`, `head`, `options`, and `patch`. These methods automatically define the corresponding `:method` condition, with the `get` helper also including `head` as an accepted HTTP method.
 
 Pattern Matching
 ----------------
@@ -68,15 +68,19 @@ Conditions
 Conditions are essentially just pre-requisites that must be met before a mapping is invoked to handle the current request. They're implemented as `Proc` objects which take a single argument, and return true if the condition is satisfied, or false otherwise. Scorched comes with a number of pre-defined conditions included, many of which are provided by _rack-accept_ - one of the few dependancies of Scorched.
 
 * `:charset` - Character sets accepted by the client.
+* `:config` - Takes a hash, each element of which must match the value of the corresponding config option.
 * `:encoding` - Encodings accepted by the client.
+* `:failed_condition` - If one or more mappings are matched, but they're conditions do not pass, the first failed condition of the first matched mapping is considered the `failed_condition` for the request.
 * `:host` - The host name (i.e. domain name) used in the request.
 * `:language` - Languages accepted by the client.
 * `:media_type` - Media types (i.e. content types) accepted by the client.
-* `:methods` - The request method used, e.g. GET, POST, PUT, ...
+* `:matched` - Whether a mapping in the controller instance was invoked as the target for the request.
+* `:method` - The request method used, e.g. GET, POST, PUT, ... .
+* `:proc` - An on-the-fly condition to be evaluated in the context of the controller instance. Should return true if the condition was satisfied, or false otherwise.
 * `:user_agent` - The user agent string provided with the request. Takes a Regexp or String.
 * `:status` - The response status of the request. Intended for use by _after_ filters.
 
-Like configuration options, conditions are implemented using the `Scorched::Options` class, so they're inherited and be overridable by child classes. You may easily add your own conditions as the example below demonstrates.
+Like configuration options, conditions are implemented using the `Scorched::Options` class, so they're inherited and can be overridden by child classes. You may easily add your own conditions as the example below demonstrates.
 
 ```ruby
 condition[:has_permission] = proc { |v|

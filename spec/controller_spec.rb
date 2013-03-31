@@ -14,7 +14,7 @@ module Scorched
     it "contains a set of default conditions" do
       app.conditions.should be_a(Options)
       app.conditions.length.should > 0
-      app.conditions[:methods].should be_a(Proc)
+      app.conditions[:method].should be_a(Proc)
     end
     
     describe "basic route handling" do
@@ -143,21 +143,21 @@ module Scorched
     describe "conditions" do
       it "contains a default set of conditions" do
         app.conditions.should be_a(Options)
-        app.conditions.should include(:methods, :media_type)
+        app.conditions.should include(:method, :media_type)
         app.conditions.each { |k,v| v.should be_a(Proc) }
       end
       
       it "executes route only if all conditions return true" do
-        app << {pattern: '/', conditions: {methods: 'POST'}, target: generic_handler}
+        app << {pattern: '/', conditions: {method: 'POST'}, target: generic_handler}
         response = rt.get "/"
-        response.status.should == 404
+        response.status.should be_between(400, 499)
         response = rt.post "/"
         response.status.should == 200
         
         app.conditions[:has_name] = proc { |name| request.GET['name'] }
-        app << {pattern: '/about', conditions: {methods: ['GET', 'POST'], has_name: 'Ronald'}, target: generic_handler}
+        app << {pattern: '/about', conditions: {method: ['GET', 'POST'], has_name: 'Ronald'}, target: generic_handler}
         response = rt.get "/about"
-        response.status.should == 404
+        response.status.should be_between(400, 499)
         response = rt.get "/about", name: 'Ronald'
         response.status.should == 200
       end
@@ -170,8 +170,8 @@ module Scorched
       end
       
       it "falls through to next route when conditions are not met" do
-        app << {pattern: '/', conditions: {methods: 'POST'}, target: proc { |env| [200, {}, ['post']] }}
-        app << {pattern: '/', conditions: {methods: 'GET'}, target: proc { |env| [200, {}, ['get']] }}
+        app << {pattern: '/', conditions: {method: 'POST'}, target: proc { |env| [200, {}, ['post']] }}
+        app << {pattern: '/', conditions: {method: 'GET'}, target: proc { |env| [200, {}, ['get']] }}
         rt.get("/").body.should == 'get'
         rt.post("/").body.should == 'post'
       end
@@ -179,9 +179,9 @@ module Scorched
     
     describe "route helpers" do
       it "allows end points to be defined more succinctly" do
-        route_proc = app.route('/*', 2, methods: 'GET') { |capture| capture }
+        route_proc = app.route('/*', 2, method: 'GET') { |capture| capture }
         mapping = app.mappings.first
-        mapping.should == {pattern: mapping[:pattern], priority: 2, conditions: {methods: 'GET'}, target: route_proc}
+        mapping.should == {pattern: mapping[:pattern], priority: 2, conditions: {method: 'GET'}, target: route_proc}
         rt.get('/about').body.should == 'about'
       end
       
@@ -249,11 +249,11 @@ module Scorched
         end
       
         it "can take mapping options" do
-          app.controller priority: -1, conditions: {methods: 'POST'} do
+          app.controller priority: -1, conditions: {method: 'POST'} do
             route('/') { 'ok' }
           end
           app.mappings.first[:priority].should == -1
-          rt.get('/').status.should == 404
+          rt.get('/').status.should be_between(400, 499)
           rt.post('/').body.should == 'ok'
         end
         
@@ -303,12 +303,22 @@ module Scorched
       
       they "can take an optional set of conditions" do
         counter = 0
-        app.before(methods: ['GET', 'PUT']) { counter += 1  }
-        app.after(methods: ['GET', 'PUT']) { counter += 1  }
+        app.before(method: ['GET', 'PUT']) { counter += 1  }
+        app.after(method: ['GET', 'PUT']) { counter += 1  }
         rt.post('/')
         rt.get('/')
         rt.put('/')
         counter.should == 4
+      end
+      
+      they "execute in the order they're defined" do
+        order = []
+        app.before { order << :first }
+        app.before { order << :second }
+        app.after { order << :third }
+        app.after { order << :fourth }
+        rt.get('/')
+        order.should == %i{first second third fourth}
       end
       
       describe "nesting" do
@@ -331,26 +341,48 @@ module Scorched
           after_counter.should == 1
         end
         
-        example "before filters run from outermost to inner" do
+        example "before filters run from outermost to innermost" do
           order = []
           app.before { order << :outer }
+          app.before { order << :outer2 }
           app.controller do
             before { order << :inner }
+            before { order << :inner2 }
             get('/') { }
           end
           rt.get('/')
-          order.should == [:outer, :inner]
+          order.should == %i{outer outer2 inner inner2}
         end
         
         example "after filters run from innermost to outermost" do
           order = []
           app.after { order << :outer }
+          app.after { order << :outer2 }
           app.controller do
             get('/') { }
             after { order << :inner }
+            after { order << :inner2 }
           end
           rt.get('/')
-          order.should == [:inner, :outer]
+          order.should == %i{inner inner2 outer outer2}
+        end
+        
+        example "inherited filters which fail to satisfy their conditions are re-evaluated at every level" do
+          order = []
+          sub_class = app.controller do
+            before { order << :third }
+            get('/hello') { }
+          end
+          app.before(status: 500) do
+            order << :second
+            self.class.should == sub_class
+          end
+          app.before do
+            order << :first
+            response.status = 500
+          end
+          rt.get('/hello')
+          order.should == %i{first second third}
         end
       end
     end
@@ -432,7 +464,7 @@ module Scorched
       end
       
       they "can take an optional set of conditions" do
-        app.error(methods: ['GET', 'PUT']) { true  }
+        app.error(method: ['GET', 'PUT']) { true  }
         expect {
           rt.post('/')
         }.to raise_error(StandardError)
@@ -582,6 +614,26 @@ module Scorched
           expect {
             response = rt.get('/')
           }.to raise_error(RuntimeError)
+        end
+      end
+      
+      describe :show_http_error_pages do
+        it "shows HTTP error pages for errors 400 to 599" do
+          app.config[:show_http_error_pages] = true
+          app.get('/') { response.status = 501; '' }
+          app.get('/unknown') { response.status = 480; nil }
+          rt.get('/').body.should include('501 Not Implemented')
+          rt.post('/').body.should include('405 Method Not Allowed')
+          rt.get('/unknown').body.should include('480 ')
+        end
+        
+        it "can be disabled" do
+          app.config[:show_http_error_pages] = false
+          app.get('/') { response.status = 501; '' }
+          app.get('/unknown') { response.status = 480; nil }
+          rt.get('/').body.should_not include('501 Not Implemented')
+          rt.post('/').body.should_not include('405 Method Not Allowed')
+          rt.post('/unknown').body.should_not include('408 ')
         end
       end
       

@@ -8,17 +8,17 @@ module Scorched
     
     # Returns a hash of captured strings from the last matched URL in the breadcrumb.
     def captures
-      breadcrumb.last ? breadcrumb.last[:captures] : []
+      breadcrumb.last ? breadcrumb.last.captures : []
     end
     
     # Returns an array of capture arrays; one for each mapping that's been hit during the request processing so far.
     def all_captures
-      breadcrumb.map { |v| v[:captures] }
+      breadcrumb.map { |match| match.captures }
     end
     
     # The portion of the path that's currently been matched by one or more mappings.
     def matched_path
-      join_paths(breadcrumb.map{|v| v[:path]})
+      join_paths(breadcrumb.map{ |match| match.path })
     end
     
     # The remaining portion of the path that has yet to be matched by any mappings.

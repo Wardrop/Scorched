@@ -3,6 +3,23 @@ Milestones
 
 Changelog
 ---------
+### v0.10
+* Route matching internals have been refactored.
+    * Match information is now stored in the `Match` struct for better formalisation.
+    * `matches` method no longer has a short-circuit option, and now returns all mappings that match the URL, regardless of whether their conditions passed. It also now caches the set of matches which are returned on subsequent calls.
+    * The first failed condition (if any) is stored in the `Match` struct as `:failed_condition`. This allows one to change the response in an after block depending on what condition failed. For example, proper status codes can be set depending on the failed condition.
+    * Response status defaults to 403 if one or more mappings are matched, but their conditions do not pass. The existing behaviour was to always return 404.
+* Added `:proc` condition which takes one or more Proc objects, allowing custom conditions to be added on-the-fly.
+* Added `:matched` condition. When a controller delegates the request to a mapping, it's considered to be matched.
+* Added `:failed_condition` condition. If one or more mappings are matched, but they're conditions do not pass, the first failed condition of the first matched mapping is considered the `failed_condition` for the request.
+* Added `:config` condition which takes a hash, each element of which must match the value of the corresponding config option.
+* Renamed `:methods` condition to `:method` for consistency sake.
+* Added default error message for all empty responses with a HTTP status code between 400 and 599, inclusive.
+* `Scorched::Collection` now merges parent values onto the beginning of self, rather than the end.
+* To compensate for the previous change, an `append_parent` accessor added to `Scorched::Collection` to allow _after_ filters to run in the correct order, executing inner filters before outer filters.
+* Added `:show_http_error_pages` config option. If true, it shows the Scorched HTTP error pages. Defaults to false.
+* Filters have been added to set the appropriate HTTP status code for certain failed conditions, such as returning `405 Method Not Allowed` when for example, a POST is made to a URL that only accepts GET requests.
+
 ### v0.9
 * Refactored `render` method:
     * All Scorched options are now keyword arguments, including `:locals` which was added as a proper render option.
@@ -24,13 +41,13 @@ Changelog
     * Non-Development
         * `config[:static_dir] = false`   * Development
         * `config[:show_exceptions] = true`       * `config[:logger] = Logger.new(STDOUT)`       * Add developer-friendly 404 error page. This is implemented as an after filter, and won't have any effect if the response body is set.
-* `absolute`ethod now returns forward slash if script name is empty.
+* `absolute` method now returns forward slash if script name is empty.
 
 ### v0.6
 * `view_config` options hash renamed to ` `render_defaults`ch better reflects its function.
 
 ### v0.5.2
-* Minor modification to routing to make it behave as a documented regarding matching at the directly before or on a path.
+* Minor modification to routing to make it behave as documented regarding matching a forward slash directly after or at the end of the matched path.
 * Response content-type now defaults to "text/html;charset=utf-8", rather than empty.
 
 ### v0.5.1
@@ -80,6 +97,7 @@ Some of these remaining features may be reconsidered and either left out, or put
     intended to make link building easier.
   * Form populator implemented with Nokogiri. This would have to be added to a contrib library.
 * Add Verbose logging, including debug logging to show each routing hop and the current environment (variables, mode, etc)
+* I need feedback on what order _after_ filters should be run. While it's somewhat intuitive for them to run in the order they're defined, it could also be considered intuitive for the first defined _after_ filter to be the last to touch the outgoing response; to have priority.
 
 
 Unlikely
@@ -88,6 +106,7 @@ These features are unlikely to be implemented unless someone provides a good rea
 
 * Mutex locking option - I'm of the opinion that the web server should be configured for the concurrency model of the application, rather than the framework.
 * Using Rack::Protection by default - The problem here is that a good portion of Rack::Protection involves sessions, and given that Scorched doesn't itself load any session middleware, these components of Rack::Protection would have to be excluded. I wouldn't want to invoke a false sense of security
+* Filter priorities - They're technically possible, but I believe it would introduce the potential for _filter hell_; badly written filters and mass confusion. Filter order has to be logical and predictable. Adding prioritisation would undermine that, and make for lazy use of filters. By not having prioritisation, there's incentive to design filters to be order-agnostic.
 
 
 More things will be added as they're thought of and considered.

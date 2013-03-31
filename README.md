@@ -70,7 +70,7 @@ class MyApp < Scorched::Controller
   end
   
   # To something that gets the muscle's flexing
-  route '/articles/:title/::opts', 2, methods: ['GET', 'POST'], content_type: :json do
+  route '/articles/:title/::opts', 2, method: ['GET', 'POST'], content_type: :json do
     # Do what you want in here. Note, the second argument is the optional route priority.
   end
   

@@ -32,4 +32,4 @@ A route may _pass_ a request to the next matching route. _passing_ is very simil
 
 Redirections
 ------------
-A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple `redirect` method which takes one argument - the URL to redirect to. Like `halt` it's mostly a convenience method. It sets the _Location_ header of the response before halting the request.
+A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple `redirect` method which takes one required argument - the URL to redirect to - and an optional response status, which defaults to 307 (temporary redirect). `redirect` is mostly a convenience method. It sets the _Location_ header of the response before halting the request.

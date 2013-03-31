@@ -16,8 +16,10 @@ module Scorched
     end
     
     # Automatically wraps the assigned value in an array if it doesn't respond to ``each``.
+    # Also filters out non-true values and empty strings.
     def body=(value)
-      super(value.respond_to?(:each) ? value : [value].compact)
+      value = []  if !value || value == ''
+      super(value.respond_to?(:each) ? value : [value.to_s])
     end
     
     def finish(*args, &block)

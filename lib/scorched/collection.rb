@@ -7,7 +7,10 @@ module Scorched
       [:<<, :add, :add?, :clear, :delete, :delete?, :delete_if, :merge, :replace, :subtract].include? m
     }
     
-    # sets parent Collection object and returns self
+    # If true, parent values are appended to self. The default behavior is to append self to the parent values.
+    attr_accessor :append_parent
+    
+    # Sets parent Collection object and returns self
     def parent!(parent)
       @parent = parent
       self
@@ -15,8 +18,11 @@ module Scorched
     
     def to_set(inherit = true)
       if inherit && (Set === @parent || Array === @parent)
-        # An important attribute of a Scorched::Collection is that the merged set is ordered from inner to outer.
-        Set.new.merge(self._to_a).merge(@parent.to_set)
+        if append_parent
+          Set.new.merge(self._to_a).merge(@parent.to_set)
+        else
+          Set.new.merge(@parent.to_set).merge(self._to_a)
+        end
       else
         Set.new.merge(self._to_a)
       end
@@ -27,12 +33,12 @@ module Scorched
     end
     
     def inspect
-      "#<#{self.class}: #{_inspect}, #{to_set.inspect}>"
+      "#<#{self.class}(#{super}, #{to_set.inspect})>"
     end
   end
   
   class << self
-    def Collection(accessor_name)
+    def Collection(accessor_name, append_parent = false)
       m = Module.new
       m.class_eval <<-MOD
         class << self
@@ -46,6 +52,8 @@ module Scorched
             @#{accessor_name} || begin
               parent = superclass.#{accessor_name} if superclass.respond_to?(:#{accessor_name}) && Scorched::Collection === superclass.#{accessor_name}
               @#{accessor_name} = Collection.new.parent!(parent)
+              @#{accessor_name}.append_parent = #{append_parent.inspect}
+              @#{accessor_name}
             end
           end
         end
