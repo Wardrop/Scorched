@@ -3,6 +3,9 @@ Milestones
 
 Changelog
 ---------
+### v0.11
+* Verbose debug-level logging added. Logging verbosity should be controlled by setting the appropriate level on the configured `Logger`.
+
 ### v0.10
 * Route matching internals have been refactored.
     * Match information is now stored in the `Match` struct for better formalisation.

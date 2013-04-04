@@ -219,7 +219,7 @@ module Scorched
       env['scorched.request'] ||= Request.new(env)
       env['scorched.response'] ||= Response.new
       @_log_prefix = ' ' * (4 * request.breadcrumb.length)
-      log :debug, "#{log_object(self)} instantiated"
+      debug "%s instantiated", self
     end
     
     def action
@@ -238,7 +238,12 @@ module Scorched
             redirect(request.path.chomp('/'))
           end
           
-          log :debug, :matches
+          debug "#{matches.length} mappings matched #{request.unmatched_path.inspect}:"
+          matches.each { |m| debug "  #{m.mapping[:pattern].inspect} => %s", m.mapping[:target] }
+          eligible = matches.reject { |m| m.failed_condition }
+          debug "#{eligible.length} of which are eligible:"
+          eligible.each { |m| debug "  #{m.mapping[:pattern].inspect} => %s", m.mapping[:target] }
+          
           if matches.all? { |m| m.failed_condition }
             pass if config[:auto_pass]
             response.status = matches.empty? ? 404 : 403
@@ -251,7 +256,7 @@ module Scorched
               request.breadcrumb << match
               target = match.mapping[:target]
               break if catch(:pass) {
-                log :debug, "Invoking target: #{log_object(target)}"
+                log :debug, "Invoking target: #{(target)}"
                 response.merge! (Proc === target) ? instance_exec(env, &target) : target.call(env)
               }
               request.breadcrumb.pop
@@ -271,7 +276,7 @@ module Scorched
     # Finds mappings that match the unmatched portion of the request path, returning an array of `Match` objects, or an
     # empty array if no matches were found.
     #
-    # The `:eligable` attribute of the `Match` object indicates whether the conditions for that mapping passed.
+    # The `:eligible` attribute of the `Match` object indicates whether the conditions for that mapping passed.
     # The result is cached for the life time of the controller instance, for the sake of effecient-recalling.
     def matches
       return @matches if @matches
@@ -487,52 +492,36 @@ module Scorched
   
     def run_filters(type)
       tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
-      eligable = filters[type].reject{ |f| tracker[type].include? f || check_for_failed_condition(f[:conditions])}
-      log :debug, "Running #{eligable.length} eligable #{type} filters:"
-      eligable.each do |f|
+      eligible = filters[type].reject{ |f| tracker[type].include? f || check_for_failed_condition(f[:conditions])}
+      log :debug, "Running #{eligible.length} eligible #{type} filters:"
+      eligible.each do |f|
         log :debug, "  #{f[:conditions]} => #{log_object f[:proc]}"
         tracker[type] << f
         instance_exec(&f[:proc])
       end
     end
     
-    def log(type, message = nil, *args)
+    def log(type, message, *args)
       if config[:logger]
-        logger = config[:logger]
         type = Logger.const_get(type.to_s.upcase)
-        logger.progname ||= 'Scorched'
-        
-        case message
-        when :matches
-          message = []
-          eligable = matches.reject { |m| m.failed_condition }
-          message << "#{matches.length} mappings matched #{request.unmatched_path.inspect}:"
-          matches.each do |m|
-            message << "  #{m.mapping[:pattern].inspect} => #{log_object m.mapping[:target]}"
-          end
-          message << "#{eligable.length} of which are eligable:"
-          eligable.each do |m|
-            message << "  #{m.mapping[:pattern].inspect} => #{log_object m.mapping[:target]}"
+        config[:logger].progname ||= 'Scorched'
+        args.map! do |v|
+          case obj
+          when Proc
+            "<Proc @#{obj.source_location.join(':')}>"
+          when Array
+            obj.map { |v| log_object(v) }.inspect
+          else
+            obj.class.name || Controller === obj.class ? 'Anonymous controller' : 'Anonymous class'
           end
         end
-
-        [*message].each do |v|
-          v.insert(0, @_log_prefix)
-          logger.add(type, v)
-        end
+        message.insert(0, @_log_prefix)
+        config[:logger].add(type, format(message, args))
       end
-      true # Makes it safe to use in conditions
     end
     
-    def log_object(obj)
-      case obj
-      when Proc
-        "<Proc @#{obj.source_location.join(':')}>"
-      when Array
-        obj.map { |v| log_object(v) }.inspect
-      else
-        obj.class.name || Controller === obj.class ? 'Anonymous controller' : 'Anonymous class'
-      end
+    def debug(*args)
+      log(:debug, *args)
     end
   end
 end
