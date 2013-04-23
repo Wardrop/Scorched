@@ -191,9 +191,9 @@ module Scorched
         regex_pattern = pattern.split(%r{(\*{1,2}|(?<!\\):{1,2}[^/*$]+)}).each_slice(2).map { |unmatched, match|
           Regexp.escape(unmatched) << begin
             if %w{* **}.include? match
-              match == '*' ? "([^/]+)" : "(.+)"
+              match == '*' ? "([^/]*)" : "(.*)"
             elsif match
-              match[0..1] == '::' ? "(?<#{match[2..-1]}>.+)" : "(?<#{match[1..-1]}>[^/]+)"
+              match[0..1] == '::' ? "(?<#{match[2..-1]}>.*)" : "(?<#{match[1..-1]}>[^/]*)"
             else
               ''
             end
@@ -288,13 +288,19 @@ module Scorched
     
     # Tests the given conditions, returning the name of the first failed condition, or nil otherwise.
     def check_for_failed_condition(conds)
-      (conds || []).find { |c,v| check_condition?(c, v) ? false : c }
+      failed = (conds || []).find { |c, v| !check_condition?(c, v) }
+      if failed
+        failed[0] = failed[0][0..-2].to_sym if failed[0][-1] == '!'
+      end
+      failed
     end
     
     # Test the given condition, returning true if the condition passes, or false otherwise.
     def check_condition?(c, v)
+      c = c[0..-2].to_sym if invert = (c[-1] == '!')
       raise Error, "The condition `#{c}` either does not exist, or is not an instance of Proc" unless Proc === self.conditions[c]
-      instance_exec(v, &self.conditions[c])
+      retval = instance_exec(v, &self.conditions[c])
+      invert ? !retval : !!retval
     end
     
     def redirect(url, status = 307)

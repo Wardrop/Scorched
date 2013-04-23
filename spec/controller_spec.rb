@@ -110,6 +110,24 @@ module Scorched
         req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
       
+      example "wildcards match zero or more characters" do
+        app << {pattern: '/*', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog').status.should == 200
+        app.mappings.clear
+        app << {pattern: '/**', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog/cat').status.should == 200
+        app.mappings.clear
+        app << {pattern: '/:page', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog').status.should == 200
+        app.mappings.clear
+        app << {pattern: '/::page', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog/cat').status.should == 200
+      end
+      
       it "can match regex and preserve anonymous captures" do
         req = nil
         app << {pattern: %r{/anon/([^/]+)/(.+)}, target: proc do |env|
@@ -174,6 +192,12 @@ module Scorched
         app << {pattern: '/', conditions: {method: 'GET'}, target: proc { |env| [200, {}, ['get']] }}
         rt.get("/").body.should == 'get'
         rt.post("/").body.should == 'post'
+      end
+      
+      it "inverts the conditions if it's referenced with a trailing exclamation mark" do
+        app << {pattern: '/', conditions: {method!: 'GET'}, target: proc { |env| [200, {}, ['ok']] }}
+        rt.get("/").status.should == 405
+        rt.post("/").status.should == 200
       end
     end
     
@@ -553,6 +577,34 @@ module Scorched
           app.get('/') { }
           rt.get('/')
         }.to raise_error(ArgumentError)
+      end
+    end
+    
+    describe "status codes" do
+      it "returns 405 when :method condition fails" do
+        app.get('/') { }
+        rt.post('/').status.should == 405
+      end
+      
+      it "returns 404 when :host condition fails" do
+        app.get('/', host: 'somehost') { }
+        rt.get('/').status.should == 404
+      end
+      
+      it "returns 406 when accept-related conditions fail" do
+        app.get('/media_type', media_type: 'application/json') { }
+        app.get('/charset', charset: 'iso-8859-5') { }
+        app.get('/encoding', encoding: 'gzip') { }
+        app.get('/language', language: 'en') { }
+        
+        rt.get('/media_type', {}, 'HTTP_ACCEPT' => 'application/json').status.should == 200
+        rt.get('/media_type', {}, 'HTTP_ACCEPT' => 'text/html').status.should == 406
+        rt.get('/charset', {}, 'HTTP_ACCEPT_CHARSET' => 'iso-8859-5').status.should == 200
+        rt.get('/charset', {}, 'HTTP_ACCEPT_CHARSET' => 'iso-8859-5;q=0').status.should == 406
+        rt.get('/encoding', {}, 'HTTP_ACCEPT_ENCODING' => 'gzip').status.should == 200
+        rt.get('/encoding', {}, 'HTTP_ACCEPT_ENCODING' => 'compress').status.should == 406
+        rt.get('/language', {}, 'HTTP_ACCEPT_LANGUAGE' => 'en').status.should == 200
+        rt.get('/language', {}, 'HTTP_ACCEPT_LANGUAGE' => 'da').status.should == 406
       end
     end
     
