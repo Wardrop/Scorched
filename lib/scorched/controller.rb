@@ -409,13 +409,9 @@ module Scorched
       end
     
       # The following chunk of code is responsible for preventing the rendering of layouts within views.
-      begin
-        @_no_default_layout = true
-        output = template.render(self, locals, &block)
-      ensure
-        @_no_default_layout = false
-      end
-      
+      @_no_default_layout = true
+      output = template.render(self, locals, &block)
+
       if layout
         render(layout, dir: dir, layout: false, engine: engine, locals: locals, tilt: tilt, **options) { output }
       else
