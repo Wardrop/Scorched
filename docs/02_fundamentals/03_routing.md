@@ -19,7 +19,7 @@ Route Helpers
 -------------
 Adding mappings manually can be a little verbose and painful, which is why Scorched includes a bunch of route helpers which are used in most code examples.
 
-The main route helper which all others delegate to, is the `route` class method. Here's what it looks like in both it's simple and advance form:
+The main route helper which all others delegate to, is the `route` class method. Here's what it looks like in both it's simple and advance forms:
 
 ```ruby
 route '/' do

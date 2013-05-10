@@ -400,7 +400,7 @@ module Scorched
         file = File.join(dir, file) if dir
         # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
         template_cache.fetch(:file, tilt_engine, file, tilt_options) do
-          tilt_engine.new(nil, nil, tilt_options) { File.read(file) }
+          tilt_engine.new(file, nil, tilt_options)
         end
       else
         template_cache.fetch(:string, tilt_engine, string_or_file, tilt_options) do
@@ -410,10 +410,11 @@ module Scorched
     
       # The following chunk of code is responsible for preventing the rendering of layouts within views.
       begin
+        original_no_default_layout = @_no_default_layout
         @_no_default_layout = true
         output = template.render(self, locals, &block)
       ensure
-        @_no_default_layout = false
+        @_no_default_layout = original_no_default_layout
       end
       
       if layout

@@ -15,7 +15,7 @@ Gem::Specification.new 'scorched', Scorched::VERSION do |s|
 
   s.add_dependency 'rack', '~> 1.4'
   s.add_dependency 'rack-accept', '~> 0.4'
-  s.add_dependency 'tilt', '~> 1.3'
+  s.add_dependency 'tilt', '~> 1.4'
   s.add_development_dependency 'rack-test', '~> 0.6'
   s.add_development_dependency 'rspec', '~> 2.9'
 end

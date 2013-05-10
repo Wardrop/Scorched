@@ -3,6 +3,10 @@ Milestones
 
 Changelog
 ---------
+### v0.11.1
+* Fixed issue where multiple nested render calls would incorrectly render the layout (issue #9).
+* Bumped Tilt dependancy to v1.4 and removed work-around for Tilt encoding issue.
+
 ### v0.11
 * Route wildcards '*' and '**' (and their named equivalents) now match zero or more characters, instead of one or more. This means `/*` will now match both `/` and `/about` for example. 
 * Conditions can now be inverted by appending an exclamation mark to the condition, e.g. `method!: 'GET'` matches all HTTP methods, excluding GET.

@@ -715,6 +715,10 @@ module Scorched
           File.open('views/temp.str', 'w') { |f| f.write 'hello world' }
         end
         
+        after(:all) {
+          File.unlink 'views/temp.str'
+        }
+        
         it "can cache templates" do
           app.config[:cache_templates] = true
           app.get('/') { render :'temp.str' }
@@ -890,7 +894,7 @@ module Scorched
         app.get('/') do
           render :composer
         end
-        rt.get('/').body.should == '({1 for none})'
+        rt.get('/').body.should == '({1 for none}{1 for none})'
       end
       
       it "can pass local variables through to view" do
