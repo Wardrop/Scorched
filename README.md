@@ -107,11 +107,6 @@ This API shouldn't look too foreign to anyone familiar with frameworks like Sina
 * Conditions - Conditions are merely procs defined on the controller which are inherited (and can be overriden) by child controllers. When a request comes in, mappings that match the requested URL, first have their conditions evaluated in the context of the controller instance, before control is handed off to the target associated with that mapping. It's a very simple implementation that comes with a lot of flexibility.
 
 
-Development Progress
---------------------
-Please refer to [Milestones.md](Milestones.md) for a breakdown of development progress.
-
-
 Links
 -----
 * [Website](http://scorchedrb.com)

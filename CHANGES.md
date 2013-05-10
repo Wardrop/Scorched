@@ -1,10 +1,8 @@
-Milestones
-==========
-
 Changelog
----------
+=========
+
 ### v0.11.1
-* Fixed issue where multiple nested render calls would incorrectly render the layout (issue #9).
+* Fixed an issue where subsequent nested render calls would render the default layout, which they shouldn't (issue #9).
 * Bumped Tilt dependancy to v1.4 and removed work-around for Tilt encoding issue.
 
 ### v0.11
@@ -93,24 +91,3 @@ Changelog
 * Mechanism for handling exceptions in routes and before/after filters.
 * Added static resource serving. E.g. public folder.
 
-
-
-To Do
------
-Some of these remaining features may be reconsidered and either left out, or put into some kind of contrib library.
-
-* If one or more matches are found, but their conditions don't pass, a 403 should be returned instead of a 404.
-* Make specs for Collection and Options classes more thorough, e.g. test all non-reading modifiers such as clear, delete, etc.
-
-
-Unlikely
---------
-These features are unlikely to be implemented unless someone provides a good reason.
-
-* Mutex locking option - I'm of the opinion that the web server should be configured for the concurrency model of the application, rather than the framework.
-* Using Rack::Protection by default - The problem here is that a good portion of Rack::Protection involves sessions, and given that Scorched doesn't itself load any session middleware, these components of Rack::Protection would have to be excluded. I wouldn't want to invoke a false sense of security
-* Filter priorities - They're technically possible, but I believe it would introduce the potential for _filter hell_; badly written filters and mass confusion. Filter order has to be logical and predictable. Adding prioritisation would undermine that, and make for lazy use of filters. By not having prioritisation, there's incentive to design filters to be order-agnostic.
-* Verbose logging - I originally intended to add some form of debug-style logging to show the complete flow of a request as it traverses through filters and controllers, etc. For a couple of reasons, I've decided to leave this out of Scorched. For those unfamiliar with the order in which filters and routes are invoked, it's better to learn through first-hand experience writing little test applications, rather than depending on debug logging.
-
-
-More things will be added as they're thought of and considered.
