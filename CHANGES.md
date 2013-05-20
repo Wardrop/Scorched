@@ -1,8 +1,15 @@
-Milestones
-==========
-
 Changelog
----------
+=========
+
+### v0.11.1
+* Fixed an issue where subsequent nested render calls would render the default layout, which they shouldn't (issue #9).
+* Bumped Tilt dependancy to v1.4 and removed work-around for Tilt encoding issue.
+
+### v0.11
+* Route wildcards '*' and '**' (and their named equivalents) now match zero or more characters, instead of one or more. This means `/*` will now match both `/` and `/about` for example. 
+* Conditions can now be inverted by appending an exclamation mark to the condition, e.g. `method!: 'GET'` matches all HTTP methods, excluding GET.
+* While not strictly Scorched related, one planned feature for Scorched was to implement a simple form population mechanism. This has instead been implemented as a stand-alone project, [Formless](https://github.com/Wardrop/Formless), which can be used with any framework or application, including Scorched.
+
 ### v0.10
 * Route matching internals have been refactored.
     * Match information is now stored in the `Match` struct for better formalisation.
@@ -84,29 +91,3 @@ Changelog
 * Mechanism for handling exceptions in routes and before/after filters.
 * Added static resource serving. E.g. public folder.
 
-
-
-To Do
------
-Some of these remaining features may be reconsidered and either left out, or put into some kind of contrib library.
-
-* If one or more matches are found, but their conditions don't pass, a 403 should be returned instead of a 404.
-* Make specs for Collection and Options classes more thorough, e.g. test all non-reading modifiers such as clear, delete, etc.
-* Add more view helpers, maybe?
-  * Add helper to easily read and build HTTP query strings. Takes care of "?" and "&" logic, escaping, etc. This is
-    intended to make link building easier.
-  * Form populator implemented with Nokogiri. This would have to be added to a contrib library.
-* Add Verbose logging, including debug logging to show each routing hop and the current environment (variables, mode, etc)
-* I need feedback on what order _after_ filters should be run. While it's somewhat intuitive for them to run in the order they're defined, it could also be considered intuitive for the first defined _after_ filter to be the last to touch the outgoing response; to have priority.
-
-
-Unlikely
---------
-These features are unlikely to be implemented unless someone provides a good reason.
-
-* Mutex locking option - I'm of the opinion that the web server should be configured for the concurrency model of the application, rather than the framework.
-* Using Rack::Protection by default - The problem here is that a good portion of Rack::Protection involves sessions, and given that Scorched doesn't itself load any session middleware, these components of Rack::Protection would have to be excluded. I wouldn't want to invoke a false sense of security
-* Filter priorities - They're technically possible, but I believe it would introduce the potential for _filter hell_; badly written filters and mass confusion. Filter order has to be logical and predictable. Adding prioritisation would undermine that, and make for lazy use of filters. By not having prioritisation, there's incentive to design filters to be order-agnostic.
-
-
-More things will be added as they're thought of and considered.

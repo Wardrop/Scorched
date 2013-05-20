@@ -19,7 +19,7 @@ Route Helpers
 -------------
 Adding mappings manually can be a little verbose and painful, which is why Scorched includes a bunch of route helpers which are used in most code examples.
 
-The main route helper which all others delegate to, is the `route` class method. Here's what it looks like in both it's simple and advance form:
+The main route helper which all others delegate to, is the `route` class method. Here's what it looks like in both it's simple and advance forms:
 
 ```ruby
 route '/' do
@@ -53,10 +53,10 @@ Patterns can be defined as either a String or Regexp.
 ###String Patterns
 String patterns are compiled into Regexp patterns corresponding to the following rules:
 
-* `*` - Matches all characters excluding the forward slash.
-* `**` - Matches all characters including the forward slash.
-* `:param` - Same as `*` except the capture is named to whatever the string following the single-colon is.
-* `::param` - Same as `**` except the capture is named to whatever the string following the double-colon is.
+* `*` - Matches zero or more characters, excluding the forward slash.
+* `**` - Matches zero or more characters, including the forward slash.
+* `:param` - Same as `*` except the capture is named to whatever the string following the single-colon.
+* `::param` - Same as `**` except the capture is named to whatever the string following the double-colon.
 * `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For patterns defined using the route helpers, e.g. `Controller.route`, `Controller.get`, this is implied. 
 
 ###Regex Patterns
@@ -65,7 +65,7 @@ Regex patterns offer more power and flexibility than string patterns (naturally)
 
 Conditions
 ----------
-Conditions are essentially just pre-requisites that must be met before a mapping is invoked to handle the current request. They're implemented as `Proc` objects which take a single argument, and return true if the condition is satisfied, or false otherwise. Scorched comes with a number of pre-defined conditions included, many of which are provided by _rack-accept_ - one of the few dependancies of Scorched.
+Conditions are essentially just pre-requisites that must be met before a mapping is invoked to handle the current request. They're implemented as `Proc` objects which take a single argument, and return true if the condition is satisfied, or false otherwise. Scorched comes with a number of pre-defined conditions included, some of which use functionality provided by _rack-accept_ - one of the few dependancies of Scorched.
 
 * `:charset` - Character sets accepted by the client.
 * `:config` - Takes a hash, each element of which must match the value of the corresponding config option.
@@ -80,10 +80,12 @@ Conditions are essentially just pre-requisites that must be met before a mapping
 * `:user_agent` - The user agent string provided with the request. Takes a Regexp or String.
 * `:status` - The response status of the request. Intended for use by _after_ filters.
 
+As of v0.11, Scorched also supports inverted/negated conditions by adding a trailing exclamation mark. For example, a route with the condition `method!: 'GET'` will match any HTTP request except for `GET` requests.
+
 Like configuration options, conditions are implemented using the `Scorched::Options` class, so they're inherited and can be overridden by child classes. You may easily add your own conditions as the example below demonstrates.
 
 ```ruby
-condition[:has_permission] = proc { |v|
+conditions[:has_permission] = proc { |v|
   user.has_permission == v
 }
 
