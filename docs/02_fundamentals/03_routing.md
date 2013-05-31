@@ -85,7 +85,7 @@ As of v0.11, Scorched also supports inverted/negated conditions by adding a trai
 Like configuration options, conditions are implemented using the `Scorched::Options` class, so they're inherited and can be overridden by child classes. You may easily add your own conditions as the example below demonstrates.
 
 ```ruby
-condition[:has_permission] = proc { |v|
+conditions[:has_permission] = proc { |v|
   user.has_permission == v
 }
 
