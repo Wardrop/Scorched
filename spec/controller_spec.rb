@@ -537,6 +537,17 @@ module Scorched
         rt.get('/').status.should == 401
       end
       
+      it "takes an optional response body" do
+        app.get('/') { halt 'cool' }
+        rt.get('/').body.should == 'cool'
+      end
+      
+      it "can take a status and a response body" do
+        app.get('/') { halt 401, 'cool' }
+        rt.get('/').status.should == 401
+        rt.get('/').body.should == 'cool'
+      end
+      
       it "skips processing filters" do
         app.after { response.status = 403 }
         app.get('/') { halt }
@@ -546,7 +557,7 @@ module Scorched
       it "short circuits filters if halted within filter" do
         app.before { halt }
         app.after { response.status = 403 }
-        rt.get('/').status.should == 200
+        rt.get('/').status.should_not == 403
       end
     end
     

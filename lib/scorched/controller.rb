@@ -100,8 +100,7 @@ module Scorched
       def call(env)
         loaded = env['scorched.middleware'] ||= Set.new
         app = lambda do |env|
-          instance = self.new(env)
-          instance.action
+          self.new(env).action
         end
 
         builder = Rack::Builder.new
@@ -151,6 +150,18 @@ module Scorched
       end
       
       # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
+      # Helper methods are provided for each HTTP method which automatically define the appropriate _:method_
+      # condition.
+      #
+      # :call-seq:
+      #     route(pattern = nil, priority = nil, **conds, &block)
+      #     get(pattern = nil, priority = nil, **conds, &block)
+      #     post(pattern = nil, priority = nil, **conds, &block)
+      #     put(pattern = nil, priority = nil, **conds, &block)
+      #     delete(pattern = nil, priority = nil, **conds, &block)
+      #     head(pattern = nil, priority = nil, **conds, &block)
+      #     options(pattern = nil, priority = nil, **conds, &block)
+      #     patch(pattern = nil, priority = nil, **conds, &block)
       def route(pattern = nil, priority = nil, **conds, &block)
         target = lambda do |env|
           env['scorched.response'].body = instance_exec(*env['scorched.request'].captures, &block)
@@ -159,7 +170,7 @@ module Scorched
         self << {pattern: compile(pattern, true), priority: priority, conditions: conds, target: target} if pattern
         target
       end
-
+      
       ['get', 'post', 'put', 'delete', 'head', 'options', 'patch'].each do |method|
         methods = (method == 'get') ? ['GET', 'HEAD'] : [method.upcase]
         define_method(method) do |*args, **conds, &block|
@@ -168,11 +179,18 @@ module Scorched
         end
       end
       
+      # Defines a filter of +type+. Helper methods are provided as syntactic sugar for each filter type.
+      # +args+ is used internally by Scorched for passing additional arguments to the filter, such as the exception in
+      # the case of error blocks.
+      # :call-seq:
+      #     filter(type, *args, **conds, &block)
+      #     before(*args, **conds, &block)
+      #     after(*args, **conds, &block)
+      #     error(*args, **conds, &block)
       def filter(type, *args, **conds, &block)
         filters[type.to_sym] << {args: args, conditions: conds, proc: block}
       end
       
-      # A bit of syntactic sugar for #filter.
       ['before', 'after', 'error'].each do |type|
         define_method(type) do |*args, &block|
           filter(type, *args, &block)
@@ -260,7 +278,7 @@ module Scorched
       rescue => outer_error
         outer_error == inner_error ? raise : rescue_block.call(outer_error)
       end
-      response
+      response.finish
     end
     
     # Finds mappings that match the unmatched portion of the request path, returning an array of `Match` objects, or an
@@ -308,8 +326,16 @@ module Scorched
       halt(status)
     end
     
-    def halt(status = 200)
-      response.status = status
+    # call-seq:
+    #     halt(status=nil, body=nil)
+    #     halt(body)
+    def halt(status=nil, body=nil)
+      unless status.nil? || Integer === status
+        body = status
+        status = nil
+      end
+      response.status = status if status
+      response.body = body if body
       throw :halt
     end
     

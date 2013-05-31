@@ -1,6 +1,10 @@
 Changelog
 =========
 
+### v0.12
+* Halt can now take an optional response body (typically a string).
+* Controller now returns a valid rack array, rather than a Scorched::Response.
+
 ### v0.11.1
 * Fixed an issue where subsequent nested render calls would render the default layout, which they shouldn't (issue #9).
 * Bumped Tilt dependancy to v1.4 and removed work-around for Tilt encoding issue.

@@ -1,5 +1,4 @@
 module Scorched
-  class Error < StandardError
-    
+  class Error < RuntimeError
   end
 end
