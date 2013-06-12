@@ -239,8 +239,6 @@ module Scorched
       end
       env['scorched.request'] ||= Request.new(env)
       env['scorched.response'] ||= Response.new
-      @_log_prefix = ' ' * (4 * request.breadcrumb.length)
-      log :debug, "#{log_object(self)} instantiated"
     end
     
     def action
@@ -259,7 +257,6 @@ module Scorched
             redirect(request.path.chomp('/'))
           end
           
-          log :debug, :matches
           if matches.all? { |m| m.failed_condition }
             pass if config[:auto_pass]
             response.status = matches.empty? ? 404 : 403
@@ -270,19 +267,17 @@ module Scorched
             @_matched = true == matches.each { |match|
               next if match.failed_condition
               request.breadcrumb << match
-              target = match.mapping[:target]
               break if catch(:pass) {
-                log :debug, "Invoking target: #{log_object(target)}"
+                target = match.mapping[:target]
                 response.merge! (Proc === target) ? instance_exec(env, &target) : target.call(env)
               }
               request.breadcrumb.pop
-              log :debug, "#{log_object(target)} passed the request"
             }
           rescue => inner_error
             rescue_block.call(inner_error)
           end
           run_filters(:after)
-        end || log(:debug, "Request halted")
+        end
       rescue => outer_error
         outer_error == inner_error ? raise : rescue_block.call(outer_error)
       end
@@ -523,52 +518,18 @@ module Scorched
   
     def run_filters(type)
       tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
-      eligable = filters[type].reject{ |f| tracker[type].include? f || check_for_failed_condition(f[:conditions])}
-      log :debug, "Running #{eligable.length} eligable #{type} filters:"
-      eligable.each do |f|
-        log :debug, "  #{f[:conditions]} => #{log_object f[:proc]}"
-        tracker[type] << f
-        instance_exec(&f[:proc])
+      filters[type].reject{ |f| tracker[type].include? f }.each do |f|
+        unless check_for_failed_condition(f[:conditions])
+          tracker[type] << f
+          instance_exec(&f[:proc])
+        end
       end
     end
     
-    def log(type, message = nil, *args)
-      if config[:logger]
-        logger = config[:logger]
-        type = Logger.const_get(type.to_s.upcase)
-        logger.progname ||= 'Scorched'
-        
-        case message
-        when :matches
-          message = []
-          eligable = matches.reject { |m| m.failed_condition }
-          message << "#{matches.length} mappings matched #{request.unmatched_path.inspect}:"
-          matches.each do |m|
-            message << "  #{m.mapping[:pattern].inspect} => #{log_object m.mapping[:target]}"
-          end
-          message << "#{eligable.length} of which are eligable:"
-          eligable.each do |m|
-            message << "  #{m.mapping[:pattern].inspect} => #{log_object m.mapping[:target]}"
-          end
-        end
-
-        [*message].each do |v|
-          v.insert(0, @_log_prefix)
-          logger.add(type, v)
-        end
-      end
-      true # Makes it safe to use in conditions
-    end
-    
-    def log_object(obj)
-      case obj
-      when Proc
-        "<Proc @#{obj.source_location.join(':')}>"
-      when Array
-        obj.map { |v| log_object(v) }.inspect
-      else
-        obj.class.name || Controller === obj.class ? 'Anonymous controller' : 'Anonymous class'
-      end
+    def log(type, message)
+      config[:logger].progname ||= 'Scorched'
+      type = Logger.const_get(type.to_s.upcase)
+      config[:logger].add(type, message)
     end
   end
 end
