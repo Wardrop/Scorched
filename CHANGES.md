@@ -1,6 +1,9 @@
 Changelog
 =========
 
+### v0.13
+* Added `content_type` condition, corresponding to the `Content-Type` request header.
+
 ### v0.12
 * Halt can now take an optional response body (typically a string).
 * Controller now returns a valid rack array, rather than a Scorched::Response.

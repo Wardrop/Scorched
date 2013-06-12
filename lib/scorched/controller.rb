@@ -39,13 +39,16 @@ module Scorched
     
     conditions << {
       charset: proc { |charsets|
-        [*charsets].any? { |charset| request.env['rack-accept.request'].charset? charset }
+        [*charsets].any? { |charset| env['rack-accept.request'].charset? charset }
       },
       config: proc { |map|
         map.all? { |k,v| config[k] == v }
       },
+      content_type: proc { |content_types|
+        [*content_types].include? env['CONTENT_TYPE']
+      },
       encoding: proc { |encodings|
-        [*encodings].any? { |encoding| request.env['rack-accept.request'].encoding? encoding }
+        [*encodings].any? { |encoding| env['rack-accept.request'].encoding? encoding }
       },
       failed_condition: proc { |conditions|
         if !matches.empty? && matches.all? { |m| m.failed_condition }
@@ -56,10 +59,10 @@ module Scorched
         (Regexp === host) ? host =~ request.host : host == request.host 
       },
       language: proc { |languages|
-        [*languages].any? { |language| request.env['rack-accept.request'].language? language }
+        [*languages].any? { |language| env['rack-accept.request'].language? language }
       },
       media_type: proc { |types|
-        [*types].any? { |type| request.env['rack-accept.request'].media_type? type }
+        [*types].any? { |type| env['rack-accept.request'].media_type? type }
       },
       method: proc { |methods| 
         [*methods].include?(request.request_method)

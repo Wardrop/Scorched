@@ -69,6 +69,7 @@ Conditions are essentially just pre-requisites that must be met before a mapping
 
 * `:charset` - Character sets accepted by the client.
 * `:config` - Takes a hash, each element of which must match the value of the corresponding config option.
+* `:content_type` - The content-type of the body of the request. E.g. "multipart/form-data", "application/json"
 * `:encoding` - Encodings accepted by the client.
 * `:failed_condition` - If one or more mappings are matched, but they're conditions do not pass, the first failed condition of the first matched mapping is considered the `failed_condition` for the request.
 * `:host` - The host name (i.e. domain name) used in the request.
