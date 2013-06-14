@@ -3,6 +3,7 @@ Changelog
 
 ### v0.13
 * Added `content_type` condition, corresponding to the `Content-Type` request header.
+* Reverted rogue commit containing experimental debugging logging that I didn't plan to merge. Fixes issue #12.
 
 ### v0.12
 * Halt can now take an optional response body (typically a string).
