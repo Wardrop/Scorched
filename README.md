@@ -35,7 +35,7 @@ $ rackup hello_world.ru
 
 #### A Note on Requirements
 
-Scorched requires Ruby 2.0 or above. It's important to ensure your version of Ruby 2.0 includes [changeset 39919](http://bugs.ruby-lang.org/projects/ruby-trunk/repository/revisions/39919) in order to avoid suffering from [random segmentation faults](http://bugs.ruby-lang.org/issues/8100). Ruby 2.0.0-p195 and newer include the fix, otherwise you can manually patch it during installation.
+Scorched requires Ruby 2.0 or above. If you've got Ruby 2.0.0-p195 and newer, you're good. Otherwise, you need to ensure that your version of Ruby 2.0 includes [changeset 39919](http://bugs.ruby-lang.org/projects/ruby-trunk/repository/revisions/39919) in order to avoid suffering from [random segmentation faults](http://bugs.ruby-lang.org/issues/8100).
 
 The Errors of Our Past
 ----------------------
