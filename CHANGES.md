@@ -1,6 +1,10 @@
 Changelog
 =========
 
+### v0.14
+* If a matched mapping _passes_ the request and there are no other matching mappings, a 404 status is now set by default, rather than a 200 status.
+* Renamed `matched` condition to `handled` to be less ambiguous.
+
 ### v0.13
 * Added `content_type` condition, corresponding to the `Content-Type` request header.
 * Reverted rogue commit containing experimental debugging logging that I didn't plan to merge. Fixes issue #12.

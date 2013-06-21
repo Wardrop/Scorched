@@ -166,7 +166,7 @@ module Scorched
       end
       
       it "executes route only if all conditions return true" do
-        app << {pattern: '/', conditions: {method: 'POST'}, target: generic_handler}
+        app << {pattern: '/$', conditions: {method: 'POST'}, target: generic_handler}
         response = rt.get "/"
         response.status.should be_between(400, 499)
         response = rt.post "/"
@@ -582,12 +582,23 @@ module Scorched
         rt.get('/sub').body.should == 'hello there'
       end
       
-      it "passing within filter of root controller results in uncaught symbol" do
+      it "results in uncaught symbol if passing within filter of root controller " do
         app.before { pass }
         expect {
           app.get('/') { }
           rt.get('/')
         }.to raise_error(ArgumentError)
+      end
+      
+      it "is not considered a match if a mapping passes the request" do
+        app.get('/*') { pass }
+        app.get('/nopass') {  }
+        handled = nil
+        app.after { handled = @_handled }
+        rt.get('/').status.should == 404 # 404 if matched, but passed
+        handled.should_not be_true
+        rt.get('/nopass').status.should == 200
+        handled.should be_true
       end
     end
     

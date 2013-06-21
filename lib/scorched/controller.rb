@@ -67,8 +67,8 @@ module Scorched
       method: proc { |methods| 
         [*methods].include?(request.request_method)
       },
-      matched: proc { |bool|
-        @_matched == bool
+      handled: proc { |bool|
+        @_handled == bool
       },
       proc: proc { |*blocks|
         [*blocks].all? { |b| instance_exec(&b) }
@@ -256,23 +256,22 @@ module Scorched
           if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
             redirect(request.path.chomp('/'))
           end
-          
-          if matches.all? { |m| m.failed_condition }
-            pass if config[:auto_pass]
-            response.status = matches.empty? ? 404 : 403
-          end
-          
+          eligable_matches = matches.reject { |m| m.failed_condition }
+          pass if config[:auto_pass] && eligable_matches.empty?
           run_filters(:before)
           begin
-            @_matched = true == matches.each { |match|
-              next if match.failed_condition
+            eligable_matches.each { |match|
               request.breadcrumb << match
               break if catch(:pass) {
                 target = match.mapping[:target]
                 response.merge! (Proc === target) ? instance_exec(env, &target) : target.call(env)
+                @_handled = true
               }
               request.breadcrumb.pop
             }
+            unless @_handled
+              response.status = (!matches.empty? && eligable_matches.empty?) ? 403 : 404
+            end
           rescue => inner_error
             rescue_block.call(inner_error)
           end
@@ -290,10 +289,10 @@ module Scorched
     # The `:eligable` attribute of the `Match` object indicates whether the conditions for that mapping passed.
     # The result is cached for the life time of the controller instance, for the sake of effecient-recalling.
     def matches
-      return @matches if @matches
+      return @_matches if @_matches
       to_match = request.unmatched_path
       to_match = to_match.chomp('/') if config[:strip_trailing_slash] == :ignore && to_match =~ %r{./$}
-      @matches = mappings.map { |mapping|
+      @_matches = mappings.map { |mapping|
         mapping[:pattern].match(to_match) do |match_data|
           if match_data.pre_match == ''
             if match_data.names.empty?

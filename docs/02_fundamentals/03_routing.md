@@ -75,7 +75,7 @@ Conditions are essentially just pre-requisites that must be met before a mapping
 * `:host` - The host name (i.e. domain name) used in the request.
 * `:language` - Languages accepted by the client.
 * `:media_type` - Media types (i.e. content types) accepted by the client.
-* `:matched` - Whether a mapping in the controller instance was invoked as the target for the request.
+* `:handled` - Whether a mapping in the controller instance was invoked as the target for the request. A mapping that _passes_ a request is not considered a match.
 * `:method` - The request method used, e.g. GET, POST, PUT, ... .
 * `:proc` - An on-the-fly condition to be evaluated in the context of the controller instance. Should return true if the condition was satisfied, or false otherwise.
 * `:user_agent` - The user agent string provided with the request. Takes a Regexp or String.
