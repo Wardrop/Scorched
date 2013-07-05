@@ -170,7 +170,9 @@ module Scorched
           env['scorched.response'].body = instance_exec(*env['scorched.request'].captures, &block)
           env['scorched.response']
         end
-        self << {pattern: compile(pattern, true), priority: priority, conditions: conds, target: target} if pattern
+        [*pattern].compact.each do |pattern|
+          self << {pattern: compile(pattern, true), priority: priority, conditions: conds, target: target}
+        end
         target
       end
       

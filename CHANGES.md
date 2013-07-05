@@ -1,6 +1,10 @@
 Changelog
 =========
 
+### v0.15
+* Route DSL methods (`route`, `get`, `post`, ...) now accept an array of patterns as the pattern argument. Each pattern is defined as a separate mapping, sharing the same target proc. This provides a cleaner and more efficient solution to simply wrapping a route definition within a loop.
+* URI unescaping has been implemented for `Scorched::Request#unmatched_path`. This modification directly affects route matching. Previously, routes were matched against the escaped path, e.g. `/this%20has%20spaces`. Routes are now matched against the unescaped form `/this has spaces`. The only exception is the escaped forward-slash `%2F` and percent sign `%25` which remain unaltered for the fact their unescaped form as special meaning which you wouldn't be able to disambiguate. It's however safe to unescape the path a second time to resolve these characters.
+
 ### v0.14
 * If a matched mapping _passes_ the request and there are no other matching mappings, a 404 status is now set by default, rather than a 200 status.
 * Renamed `matched` condition to `handled` to be less ambiguous.

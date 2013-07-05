@@ -72,6 +72,16 @@ module Scorched
         response.status.should == 200
       end
       
+      it "unescapes all characters except for the forward-slash and percent sign" do
+        app << {pattern: '/a (quite) big fish', target: generic_handler}
+        rt.get('/a%20%28quite%29%20big%20fish').status.should == 200
+        app << {pattern: '/article/100%25 big%2Fsmall', target: generic_handler}
+        rt.get('/article/100%25%20big%2Fsmall').status.should == 200
+        app << {pattern: '/*$', target: generic_handler}
+        rt.get('/page%2Fabout').status.should == 200
+        rt.get('/page/about').status.should == 404
+      end
+      
       it "unmatched path doesn't always begin with a forward slash" do
         gh = generic_handler
         app << {pattern: '/ab', target: Class.new(Scorched::Controller) do
@@ -237,6 +247,13 @@ module Scorched
           response.body.should == []
         end
         rt.get('/')
+      end
+      
+      it "can take an array of patterns" do
+        app.get(['/', '/dog']) { 'rad' }
+        rt.get('/dog').status.should == 200
+        rt.get('/').status.should == 200
+        rt.get('/cat').status.should == 404
       end
     end
     

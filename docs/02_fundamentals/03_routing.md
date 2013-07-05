@@ -33,9 +33,9 @@ end
 
 You can see pretty clearly how these examples correspond to the pattern, priority, conditions and target options of a manual mapping. The pattern, priority and conditions behave exactly as they do for a manual mapping, with a couple of exceptions.
 
-The first exception is that the pattern must match to the end of the request path. This is mentioned in the _pattern matching_ section below.
+The first exception is that the pattern must match to the end of the request path. This is mentioned in the _pattern matching_ section below. You can also define a route with multiple patterns by using an array. This creates a different mapping for each URL, but using the same proc object and other arguments.
 
-The other more notable exception is in how the given block is treated. The block given to the route helper is wrapped in another proc. The wrapping proc does a couple of things. It first sends all the captures in the url pattern as argument to the given block, this is shown in the example above. The other thing it does is takes care of assigning the return value to the body of the response.
+The other more notable exception is in how the given block is treated. The block given to the route helper is wrapped in another proc. The wrapping proc does a couple of things. It first sends all the captures in the url pattern as arguments to the given block; this is shown in the example above. The other thing it does is takes care of assigning the return value to the body of the response.
 
 In the latter of the two examples above, a `:method` condition defines what methods the route is intended to process. The first example has no such condition, so it accepts all HTTP methods. Typically however, a route will handle a single HTTP method, which is why Scorched also provides the convenience helpers: `get`, `post`, `put`, `delete`, `head`, `options`, and `patch`. These methods automatically define the corresponding `:method` condition, with the `get` helper also including `head` as an accepted HTTP method.
 
@@ -43,6 +43,10 @@ Pattern Matching
 ----------------
 All patterns attempt to match the remaining unmatched portion of the _request path_; the _request path_ being Rack's
 `path_info` request variable. The unmatched path will always begin with a forward slash if the previously matched portion of the path ended immediately before, or included as the last character, a forward slash. As an example, if the request was to "/article/21", then both "/article/" => "/21" and "/article" => "/21" would match.
+
+The `path_info` used to match against is unescaped, meaning percent-codes are resolved, e.g. `%20` resolves to a space. The two exceptions are the escaped forward-slash and percent sign, which remain escaped as `%2F` and `%25` respectively.
+
+> The forward-slash cannot be automatically escaped as it would make it impossible to disambiguate from an actual forward-slash in the URL (which has special meaning). The encoded percent-sign thus also needs to remain unescaped, otherwise it'd be impossible to safely unescape the escaped forward-slash in your application, if you needed to. If this all sounds very confusing, rest assured you probably won't ever encounter a scenario in which you'd have to think about this.
 
 All patterns must match from the beginning of the path. So even though the pattern "article" would match "/article/21", it wouldn't count as a match because the match didn't start at a non-zero offset.
 
