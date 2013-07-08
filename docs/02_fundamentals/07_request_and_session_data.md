@@ -14,6 +14,8 @@ post '/' do
 end
 ```
 
+One of the few opinions Scorched does maintain (albeit without imposition), is that GET and POST data should be accessed by their respective methods. GET and POST data are semantically different, so if you're not concerned about where the data came from, it may be a good sign you're doing something wrong.
+
 Uploaded files are also accessible as ordinary fields, except the associated value is a hash of properties, instead of a string. An example of an application that accepts file uploads is included in the "examples" directory of the Scorched git repository.
 
 Cookies
@@ -28,7 +30,7 @@ def '/' do
 end
 ```
    
-For each of the above lines, the corresponding Rack methods are called, e.g. `Rack::Requeste#cookies`, `Rack::Response#set_cookie` and `Rack::Response#delete_cookie`. The values for setting and deleting a cookie can also be a hash, like `set_cookie` and `delete_cookie` can take directly. Deleting still works when a Hash is provided, as long as the `value` property is nil.
+For each of the above lines, the corresponding Rack methods are called, e.g. `Rack::Requeste#cookies`, `Rack::Response#set_cookie` and `Rack::Response#delete_cookie`. The values for setting and deleting a cookie can also be a hash, as per the documentation for `set_cookie` and `delete_cookie`. Deletion is still possible when a Hash is provided, as long as the `value` property is nil.
 
 ```ruby
 def '/' do
@@ -40,7 +42,7 @@ end
 
 Sessions
 --------
-Sessions are completely handled by Rack. For conveniance, a `session` helper is provided. This merely acts as an alias to `request['rack.session']` however. It was raise an exception if called without any Rack session middleware loaded, such as `Rack::Session::Cookie`.
+Sessions are completely handled by Rack. For convenience, Scorched provides a `session` helper. This merely acts as an alias to `request['rack.session']`. It will raise an exception if called without any Rack session middleware loaded, such as `Rack::Session::Cookie`.
 
 ```ruby
 class App < Scorched::Controller
@@ -54,10 +56,10 @@ class App < Scorched::Controller
 end
 ```
 
-###Flash
-A common requirement for websites, and especially web applications, is to provide a message on the next page load corresponding to an action that a user just performed. A common framework idiom that Scorched happily implements are flash session variables - special session data that lives for only a single page load.
+###Flash Session Data
+A common requirement for websites, especially web applications, is to provide a message on the next page load corresponding to an action that a user has just performed. A common framework idiom that Scorched happily implements are flash session variables - special session data that lives for only a single page load.
 
-This isn't as trivial to implement as it may sound at a glance, which is why Scorched provides this helper.
+This isn't as trivial to implement as it may sound at a glance, which is why Scorched provides this helper out-of-the-box.
 
 ```ruby
 get '/' do

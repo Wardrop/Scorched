@@ -12,6 +12,6 @@ before user_agent: /MSIE|Windows/ do
 end
 
 get '/' do
-  "Welcome to #{env['myapp.settings.site_name']}!"
+  "Welcome #{env['myapp.user.name']}!"
 end
 ```
