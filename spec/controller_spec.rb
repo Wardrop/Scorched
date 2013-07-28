@@ -590,15 +590,21 @@ module Scorched
       end
       
       it "invokes the next match in parent controller if passed from filter" do
+        effects = []
         app.controller '/sub' do
           get('/') { }
           after do
-            response.body << 'hello'
+            effects.push 1
+            response.body << 'x'
             pass
           end
         end
-        app.get('/sub') { response.body << ' there' }
-        rt.get('/sub').body.should == 'hello there'
+        app.get('/sub') {
+          effects.push 2
+          response.body << 'y'
+        }
+        rt.get('/sub').body.should == 'y'
+        effects.should == [1, 2]
       end
       
       it "results in uncaught symbol if passing within filter of root controller " do
