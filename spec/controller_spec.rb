@@ -413,6 +413,10 @@ module Scorched
         example "inherited filters which fail to satisfy their conditions are re-evaluated at every level" do
           order = []
           sub_class = app.controller do
+            def initialize(env)
+              super(env)
+              response.status = 500
+            end
             before { order << :third }
             get('/hello') { }
           end
@@ -422,7 +426,6 @@ module Scorched
           end
           app.before do
             order << :first
-            response.status = 500
           end
           rt.get('/hello')
           order.should == %i{first second third}
