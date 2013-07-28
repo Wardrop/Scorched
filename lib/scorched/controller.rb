@@ -168,7 +168,7 @@ module Scorched
       #     options(pattern = nil, priority = nil, **conds, &block)
       #     patch(pattern = nil, priority = nil, **conds, &block)
       def route(pattern = nil, priority = nil, **conds, &block)
-        target = lambda do |env|
+        target = lambda do
           response.body = instance_exec(*request.captures, &block)
           response
         end
@@ -269,7 +269,7 @@ module Scorched
               break if catch(:pass) {
                 target = match.mapping[:target]
                 response.merge! (if Proc === target
-                  instance_exec(env, &target)
+                  instance_exec(&target)
                 else
                   mangled_env = env.dup
                   # TODO: check if we respect the case with escaped path
