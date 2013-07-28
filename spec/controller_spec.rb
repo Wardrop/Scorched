@@ -82,16 +82,6 @@ module Scorched
         rt.get('/page/about').status.should == 404
       end
       
-      it "unmatched path doesn't always begin with a forward slash" do
-        gh = generic_handler
-        app << {pattern: '/ab', target: Class.new(Scorched::Controller) do
-          map(pattern: 'out', target: gh)
-        end}
-        resp = rt.get('/about')
-        resp.status.should == 200
-        resp.body.should == "ok"
-      end
-      
       it "unmatched path begins with forward slash if last match was up to or included a forward slash" do
         gh = generic_handler
         app << {pattern: '/about/', target: Class.new(Scorched::Controller) do
@@ -269,11 +259,22 @@ module Scorched
 
       they "have access to original unmangled PATH_INFO via 'scorched.path_info'" do
         app << {pattern: '/article', target: Class.new(Scorched::Controller) do
-          get('/name') { 
+          get('/name') {
             env['scorched.path_info']
           }
         end}
         rt.get('/article/name').body.should == '/article/name'
+      end
+
+      it "propagates correclty mangles escaped PATH_INFO before passing to sub-controller" do
+        app << {pattern: '/:category', target: Class.new(Scorched::Controller) do
+          get('/:name') {
+            'hello'
+          }
+        end}
+        resp = rt.get('/big%20articles/article%20name')
+        resp.status.should == 200
+        resp.body.should == 'hello'
       end
 
       describe "controller helper" do

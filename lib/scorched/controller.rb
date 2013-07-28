@@ -273,8 +273,7 @@ module Scorched
                   instance_exec(&target)
                 else
                   mangled_env = env.dup
-                  # TODO: check if we respect the case with escaped path
-                  mangled_env['PATH_INFO'] = env['PATH_INFO'][match.path.length..-1]
+                  mangled_env['PATH_INFO'] = request.unmatched_path[match.path.length..-1]
                   target.call(mangled_env)
                 end)
                 @_handled = true
