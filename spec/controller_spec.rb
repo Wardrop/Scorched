@@ -266,7 +266,16 @@ module Scorched
         end}
         rt.get('/article/hello-world').body.should == 'hello-world'
       end
-      
+
+      they "have access to original unmangled PATH_INFO via 'scorched.path_info'" do
+        app << {pattern: '/article', target: Class.new(Scorched::Controller) do
+          get('/name') { 
+            env['scorched.path_info']
+          }
+        end}
+        rt.get('/article/name').body.should == '/article/name'
+      end
+
       describe "controller helper" do
         it "can be given no arguments" do
           app.controller do

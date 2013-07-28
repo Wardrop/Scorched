@@ -241,6 +241,7 @@ module Scorched
       define_singleton_method :env do
         env
       end
+      env['scorched.path_info'] ||= env['PATH_INFO']
       @request = Request.new(env)
       @response = Response.new
     end
