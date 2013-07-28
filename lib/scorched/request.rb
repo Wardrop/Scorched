@@ -25,7 +25,7 @@ module Scorched
     
     # The remaining portion of the path that has yet to be matched by any mappings.
     def unmatched_path
-      path = unescaped_path.partition(matched_path).last
+      path = unescaped_path
       path[0,0] = '/' if path.empty? || matched_path[-1] == '/'
       path
     end

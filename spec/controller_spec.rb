@@ -87,7 +87,9 @@ module Scorched
         app << {pattern: '/ab', target: Class.new(Scorched::Controller) do
           map(pattern: 'out', target: gh)
         end}
-        rt.get('/about').body.should == "ok"
+        resp = rt.get('/about')
+        resp.status.should == 200
+        resp.body.should == "ok"
       end
       
       it "unmatched path begins with forward slash if last match was up to or included a forward slash" do
