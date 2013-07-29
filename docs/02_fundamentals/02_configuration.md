@@ -19,9 +19,9 @@ Each configuration is listed below, with the default value of each included. Not
     The directory Scorched should serve static files from. Should be set to false if the web server or some other middleware is serving static files.
 * `config[:strip_trailing_slash] = :redirect`  
     Controls how trailing forward slashes in requests are handled.
-    * `:redirect` - Strips and redirects URL's ending in a forward slash
-    * `:ignore` - Internally ignores trailing slash
-    * `false` - Does nothing. Respects the presence of a trailing forward flash.
+    * `:redirect` - Strips and redirects URL's ending in a forward slash. Note that for efficiency sake, the redirection takes place in the first controller that has this option set to `:redirect`, hence a sub-controller that otherwise matches the request will never be invoked, even if it sets `:strip_trailing_slash` to something other than `:redirect`.
+    * `:ignore` - Internally ignores (pretends it doesn't exist) any trailing slash
+    * `false` - Does nothing. Respects the presence of a trailing forward flash, as it would any other trailing character.
 
 You can also configure the default options when rendering views by setting them on the `render_defaults` hash. The options specified here are merged with those provided when calling the `render` method, with the explicit options obviously taking precedence over the defaults.
 
