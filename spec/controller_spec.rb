@@ -87,7 +87,9 @@ module Scorched
         app << {pattern: '/ab', target: Class.new(Scorched::Controller) do
           map(pattern: 'out', target: gh)
         end}
-        rt.get('/about').body.should == "ok"
+        resp = rt.get('/about')
+        resp.status.should == 200
+        resp.body.should == "ok"
       end
       
       it "unmatched path begins with forward slash if last match was up to or included a forward slash" do
@@ -264,7 +266,27 @@ module Scorched
         end}
         rt.get('/article/hello-world').body.should == 'hello-world'
       end
-      
+
+      they "have access to original unmangled PATH_INFO via 'scorched.path_info'" do
+        app << {pattern: '/article', target: Class.new(Scorched::Controller) do
+          get('/name') {
+            env['scorched.path_info']
+          }
+        end}
+        rt.get('/article/name').body.should == '/article/name'
+      end
+
+      it "propagates correclty mangles escaped PATH_INFO before passing to sub-controller" do
+        app << {pattern: '/:category', target: Class.new(Scorched::Controller) do
+          get('/:name') {
+            'hello'
+          }
+        end}
+        resp = rt.get('/big%20articles/article%20name')
+        resp.status.should == 200
+        resp.body.should == 'hello'
+      end
+
       describe "controller helper" do
         it "can be given no arguments" do
           app.controller do
@@ -411,6 +433,10 @@ module Scorched
         example "inherited filters which fail to satisfy their conditions are re-evaluated at every level" do
           order = []
           sub_class = app.controller do
+            def initialize(env)
+              super(env)
+              response.status = 500
+            end
             before { order << :third }
             get('/hello') { }
           end
@@ -420,7 +446,6 @@ module Scorched
           end
           app.before do
             order << :first
-            response.status = 500
           end
           rt.get('/hello')
           order.should == %i{first second third}
@@ -588,15 +613,21 @@ module Scorched
       end
       
       it "invokes the next match in parent controller if passed from filter" do
+        effects = []
         app.controller '/sub' do
           get('/') { }
           after do
-            response.body << 'hello'
+            effects.push 1
+            response.body << 'x'
             pass
           end
         end
-        app.get('/sub') { response.body << ' there' }
-        rt.get('/sub').body.should == 'hello there'
+        app.get('/sub') {
+          effects.push 2
+          response.body << 'y'
+        }
+        rt.get('/sub').body.should == 'y'
+        effects.should == [1, 2]
       end
       
       it "results in uncaught symbol if passing within filter of root controller " do
