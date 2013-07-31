@@ -9,6 +9,8 @@ module Scorched
     include Scorched::Collection('before_filters')
     include Scorched::Collection('after_filters', true)
     include Scorched::Collection('error_filters')
+
+    attr_reader :request, :response
     
     config << {
       :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
@@ -166,9 +168,9 @@ module Scorched
       #     options(pattern = nil, priority = nil, **conds, &block)
       #     patch(pattern = nil, priority = nil, **conds, &block)
       def route(pattern = nil, priority = nil, **conds, &block)
-        target = lambda do |env|
-          env['scorched.response'].body = instance_exec(*env['scorched.request'].captures, &block)
-          env['scorched.response']
+        target = lambda do
+          response.body = instance_exec(*request.captures, &block)
+          response
         end
         [*pattern].compact.each do |pattern|
           self << {pattern: compile(pattern, true), priority: priority, conditions: conds, target: target}
@@ -239,8 +241,9 @@ module Scorched
       define_singleton_method :env do
         env
       end
-      env['scorched.request'] ||= Request.new(env)
-      env['scorched.response'] ||= Response.new
+      env['scorched.path_info'] ||= env['PATH_INFO']
+      @request = Request.new(env)
+      @response = Response.new
     end
     
     def action
@@ -266,7 +269,13 @@ module Scorched
               request.breadcrumb << match
               break if catch(:pass) {
                 target = match.mapping[:target]
-                response.merge! (Proc === target) ? instance_exec(env, &target) : target.call(env)
+                response.merge! (if Proc === target
+                  instance_exec(&target)
+                else
+                  mangled_env = env.dup
+                  mangled_env['PATH_INFO'] = request.unmatched_path[match.path.length..-1]
+                  target.call(mangled_env)
+                end)
                 @_handled = true
               }
               request.breadcrumb.pop
@@ -345,16 +354,6 @@ module Scorched
     
     def pass
       throw :pass
-    end
-    
-    # Convenience method for accessing Rack request.
-    def request
-      env['scorched.request']
-    end
-    
-    # Convenience method for accessing Rack response.
-    def response
-      env['scorched.response']
     end
     
     # Convenience method for accessing Rack session.
