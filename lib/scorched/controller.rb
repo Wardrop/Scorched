@@ -241,7 +241,9 @@ module Scorched
       define_singleton_method :env do
         env
       end
+      env['scorched.root_path'] ||= env['SCRIPT_NAME']
       env['scorched.path_info'] ||= env['PATH_INFO']
+      env['scorched.script_name'] ||= env['SCRIPT_NAME']
       @request = Request.new(env)
       @response = Response.new
     end
@@ -273,6 +275,7 @@ module Scorched
                   instance_exec(&target)
                 else
                   mangled_env = env.dup
+                  mangled_env['SCRIPT_NAME'] = request.matched_path
                   mangled_env['PATH_INFO'] = request.unmatched_path[match.path.length..-1]
                   target.call(mangled_env)
                 end)
@@ -452,7 +455,7 @@ module Scorched
         output
       end
     end
-    
+
     # Takes an optional URL, relative to the applications root, and returns a fully qualified URL.
     # Example: url('/example?show=30') #=> https://localhost:9292/myapp/example?show=30
     def url(path = nil)
@@ -461,7 +464,7 @@ module Scorched
         scheme: env['rack.url_scheme'],
         host: env['SERVER_NAME'],
         port: env['SERVER_PORT'].to_i,
-        path: env['SCRIPT_NAME']
+        path: env['scorched.root_path'],
       )
       if path
         path[0,0] = '/' unless path[0] == '/'
@@ -476,9 +479,9 @@ module Scorched
     def absolute(path = nil)
       return path if path && URI.parse(path).scheme
       return_path = if path
-        [request.script_name, path].join('/').gsub(%r{/+}, '/')
+        [env['scorched.root_path'], path].join('/').gsub(%r{/+}, '/')
       else
-        request.script_name
+        env['scorched.root_path']
       end
       return_path[0] == '/' ? return_path : return_path.insert(0, '/')
     end

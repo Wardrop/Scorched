@@ -1003,15 +1003,9 @@ module Scorched
       end
       
       let(:root_app) do
-        app = Class.new(Scorched::Controller)
+        Class.new(Scorched::Controller)
       end
 
-      let(:sub_root_app) do
-        app = Class.new(Scorched::Controller)
-        root_app.map pattern: '/sub', target: app
-        app
-      end
-      
       let(:app) do
         this = self
         builder = Rack::Builder.new
@@ -1039,11 +1033,6 @@ module Scorched
           rt.get('/myapp').body.should == test_url
         end
         
-        it "generates URL from inside subcontroller" do
-          sub_root_app.get('/') { url('hi') }
-          rt.get('https://scorchedrb.com:73/sub').body.should == 'https://scorchedrb.com:73/sub/hi'
-        end
-
         it "generates URL from inside subcontroller defined with controller helper" do
           root_app.controller '/sub2' do
             get('/') { url('hi') }
@@ -1074,11 +1063,6 @@ module Scorched
           rt.get('/myapp').body.should == test_url
         end
         
-        it "returns an absolute URL path for subcontroller" do
-          sub_root_app.get('/') { absolute }
-          rt.get('http://scorchedrb.com/sub').body.should == '/sub'
-        end
-
         it "returns an absolute URL path for subcontroller defined with controller helper" do
           root_app.controller '/sub2' do
             get('/') { absolute }
