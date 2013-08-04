@@ -37,7 +37,7 @@ The first exception is that the pattern must match to the end of the request pat
 
 The other more notable exception is in how the given block is treated. The block given to the route helper is wrapped in another proc. The wrapping proc does a couple of things. It first sends all the captures in the url pattern as arguments to the given block; this is shown in the example above. The other thing it does is takes care of assigning the return value to the body of the response.
 
-In the latter of the two examples above, a `:method` condition defines what methods the route is intended to process. The first example has no such condition, so it accepts all HTTP methods. Typically however, a route will handle a single HTTP method, which is why Scorched also provides the convenience helpers: `get`, `post`, `put`, `delete`, `head`, `options`, and `patch`. These methods automatically define the corresponding `:method` condition, with the `get` helper also including `head` as an accepted HTTP method.
+In the latter of the two examples above, a `:method` condition defines what methods the route is intended to process. The first example has no such condition, so it accepts all HTTP methods. Typically however, a route will handle a single HTTP method, which is why Scorched also provides the convenience helpers: `get`, `post`, `put`, `delete`, `head`, `options`, `patch`, `link` and `unlink`. These methods automatically define the corresponding `:method` condition, with the `get` helper also including `head` as an accepted HTTP method.
 
 Pattern Matching
 ----------------
