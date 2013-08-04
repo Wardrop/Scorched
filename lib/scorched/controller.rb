@@ -178,7 +178,7 @@ module Scorched
         target
       end
       
-      ['get', 'post', 'put', 'delete', 'head', 'options', 'patch'].each do |method|
+      ['get', 'post', 'put', 'delete', 'head', 'options', 'patch', 'link', 'unlink'].each do |method|
         methods = (method == 'get') ? ['GET', 'HEAD'] : [method.upcase]
         define_method(method) do |*args, **conds, &block|
           conds.merge!(method: methods)
