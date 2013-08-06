@@ -1,6 +1,11 @@
 Changelog
 =========
 
+### v0.16
+* A copy of the Rack env hash is now handed off to sub-controllers and other Rack-callable objects, with `PATH_INFO` and `SCRIPT_NAME` now set to appropriate values, bring Scorched inline with the Rack specification. This differs from the original behaviour which was to just forward on the original env hash unmodified.
+* URL helper method `absolute` and `url` now use the new env property `scorched.root_path` as their base path, rather than `SCRIPT_NAME`.
+* Helpers for HTTP methods `link` and `unlink` have been added.
+
 ### v0.15
 * Route DSL methods (`route`, `get`, `post`, ...) now accept an array of patterns as the pattern argument. Each pattern is defined as a separate mapping, sharing the same target proc. This provides a cleaner and more efficient solution to simply wrapping a route definition within a loop.
 * URI unescaping has been implemented for `Scorched::Request#unmatched_path`. This modification directly affects route matching. Previously, routes were matched against the escaped path, e.g. `/this%20has%20spaces`. Routes are now matched against the unescaped form `/this has spaces`. The only exception is the escaped forward-slash `%2F` and percent sign `%25` which remain unaltered for the fact their unescaped form as special meaning which you wouldn't be able to disambiguate. It's however safe to unescape the path a second time to resolve these characters.

@@ -271,14 +271,16 @@ module Scorched
               request.breadcrumb << match
               break if catch(:pass) {
                 target = match.mapping[:target]
-                response.merge! (if Proc === target
-                  instance_exec(&target)
-                else
-                  mangled_env = env.dup
-                  mangled_env['SCRIPT_NAME'] = request.matched_path
-                  mangled_env['PATH_INFO'] = request.unmatched_path[match.path.length..-1]
-                  target.call(mangled_env)
-                end)
+                response.merge! begin
+                  if Proc === target
+                    instance_exec(&target)
+                  else
+                    target.call(env.merge(
+                      'SCRIPT_NAME' => request.matched_path,
+                      'PATH_INFO' => request.unmatched_path[match.path.length..-1]
+                    ))
+                  end
+                end
                 @_handled = true
               }
               request.breadcrumb.pop
