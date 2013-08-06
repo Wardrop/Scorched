@@ -1005,7 +1005,7 @@ module Scorched
       let(:root_app) do
         Class.new(Scorched::Controller)
       end
-      
+
       let(:app) do
         this = self
         builder = Rack::Builder.new
@@ -1032,6 +1032,13 @@ module Scorched
           my_app.get('/') { url(test_url) }
           rt.get('/myapp').body.should == test_url
         end
+        
+        it "generates URL from inside subcontroller defined with controller helper" do
+          root_app.controller '/sub2' do
+            get('/') { url('hi') }
+          end
+          rt.get('https://scorchedrb.com:73/sub2').body.should == 'https://scorchedrb.com:73/hi'
+        end
       end
       
       describe "absolute" do
@@ -1054,6 +1061,13 @@ module Scorched
           test_url = 'http://google.com/blah'
           my_app.get('/') { absolute(test_url) }
           rt.get('/myapp').body.should == test_url
+        end
+        
+        it "returns an absolute URL path for subcontroller defined with controller helper" do
+          root_app.controller '/sub2' do
+            get('/') { absolute }
+          end
+          rt.get('https://scorchedrb.com:73/sub2').body.should == '/'
         end
       end
     end
