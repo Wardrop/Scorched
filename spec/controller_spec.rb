@@ -159,14 +159,29 @@ module Scorched
       end
       
       it "matches routes based on priority, otherwise giving precedence to those defined first" do
-        app << {pattern: '/', priority: -1, target: proc { |env| self.class.mappings.shift; [200, {}, ['four']] }}
-        app << {pattern: '/', target: proc { |env| self.class.mappings.shift; [200, {}, ['two']] }}
-        app << {pattern: '/', target: proc { |env| self.class.mappings.shift; [200, {}, ['three']] }}
-        app << {pattern: '/', priority: 2, target: proc { |env| self.class.mappings.shift; [200, {}, ['one']] }}
-        rt.get('/').body.should == 'one'
-        rt.get('/').body.should == 'two'
-        rt.get('/').body.should == 'three'
-        rt.get('/').body.should == 'four'
+        order = []
+        app << {pattern: '/', priority: -1, target: proc { |env| order << 'four'; [200, {}, ['ok']] }}
+        app << {pattern: '/', target: proc { |env| order << 'two'; throw :pass }}
+        app << {pattern: '/', target: proc { |env| order << 'three'; throw :pass }}
+        app << {pattern: '/', priority: 2, target: proc { |env| order << 'one'; throw :pass }}
+        rt.get('/').body.should == 'ok'
+        order.should == %w{one two three four}
+      end
+      
+      it "finds the best match for media type whilst respecting priority and definition order" do
+        app << {pattern: '/', conditions: {media_type: 'text/html'}, target: proc { |env|
+          [200, {}, ['text/html']]
+        }}
+        app << {pattern: '/', conditions: {media_type: 'application/json'}, target: proc { |env|
+          [200, {}, ['application/json']]
+        }}
+        app << {pattern: '/', priority: 1, target: proc { |env|
+          [200, {}, ['anything']]
+        }}
+        rt.get('/', media_type: 'application/json, */*;q=0.5').body.should == 'anything'
+        app.mappings.pop
+        rt.get('/', {}, 'HTTP_ACCEPT' => 'text/html;q=0.5, application/json').body.should == 'application/json'
+        rt.get('/', {}, 'HTTP_ACCEPT' =>  'text/html, */*;q=0.5').body.should == 'text/html'
       end
     end
     
@@ -267,24 +282,37 @@ module Scorched
         rt.get('/article/hello-world').body.should == 'hello-world'
       end
 
-      they "have access to original unmangled PATH_INFO via 'scorched.path_info'" do
-        app << {pattern: '/article', target: Class.new(Scorched::Controller) do
-          get('/name') {
-            env['scorched.path_info']
-          }
-        end}
-        rt.get('/article/name').body.should == '/article/name'
-      end
-
-      it "propagates correclty mangles escaped PATH_INFO before passing to sub-controller" do
-        app << {pattern: '/:category', target: Class.new(Scorched::Controller) do
-          get('/:name') {
+      it "copies env, modifying PATH_INFO and SCRIPT_NAME, before passing onto Rack-callable object" do
+        inner_env, outer_env = nil, nil
+        app.before { outer_env = env }
+        app.controller '/article' do
+          get '/name' do
+            inner_env = env
             'hello'
-          }
-        end}
-        resp = rt.get('/big%20articles/article%20name')
+          end
+        end
+        
+        resp = rt.get('/article/name')
         resp.status.should == 200
-        resp.body.should == 'hello'
+        outer_env['SCRIPT_NAME'].should == ''
+        outer_env['PATH_INFO'].should == '/article/name'
+        inner_env['SCRIPT_NAME'].should == '/article'
+        inner_env['PATH_INFO'].should == '/name'
+      end
+      
+      example "PATH_INFO and SCRIPT_NAME joined, should produce a full path" do
+        app.controller '/article/' do
+          get '/name' do
+            env['SCRIPT_NAME'] + env['PATH_INFO']
+          end
+        end
+        app.controller '/blah' do
+          get '/baz' do
+            env['SCRIPT_NAME'] + env['PATH_INFO']
+          end
+        end
+        rt.get('/article/name').body.should == '/article/name'
+        rt.get('/blah/baz').body.should == '/blah/baz'
       end
 
       describe "controller helper" do
@@ -1012,6 +1040,15 @@ module Scorched
         builder.map('/myapp') { run this.my_app }
         builder.map('/') { run this.root_app }
         builder.to_app
+      end
+      
+      it "can determine the root path of the current Scorched application" do
+        my_app.controller '/article' do
+          get '/name' do
+            env['scorched.root_path']
+          end
+        end
+        rt.get('/myapp/article/name').body.should == '/myapp'
       end
       
       describe "url" do

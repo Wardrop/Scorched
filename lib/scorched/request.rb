@@ -5,7 +5,7 @@ module Scorched
     # Keeps track of the matched URL portions and what object handled them. Useful for debugging and building
     # breadcrumb navigation.
     def breadcrumb
-      env['breadcrumb'] ||= []
+      env['scorched.breadcrumb'] ||= []
     end
     
     # Returns a hash of captured strings from the last matched URL in the breadcrumb.
@@ -25,7 +25,7 @@ module Scorched
     
     # The remaining portion of the path that has yet to be matched by any mappings.
     def unmatched_path
-      path = unescaped_path.dup
+      path = unescaped_path
       path[0,0] = '/' if (path[0] != '/' && matched_path[-1] == '/') || path.empty?
       path
     end
@@ -35,6 +35,7 @@ module Scorched
     def unescaped_path
       path_info.split(/(%25|%2F)/i).each_slice(2).map { |v, m| URI.unescape(v) << (m || '') }.join('')
     end
+    
   private
     
     # Joins an array of path segments ensuring a single forward slash seperates them.

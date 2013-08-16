@@ -127,14 +127,12 @@ module Scorched
       # Raises ArgumentError if required key values are not provided.
       def map(pattern: nil, priority: nil, conditions: {}, target: nil)
         raise ArgumentError, "Mapping must specify url pattern and target" unless pattern && target
-        priority = priority.to_i
-        insert_pos = mappings.take_while { |v| priority <= v[:priority]  }.length
-        mappings.insert(insert_pos, {
+        mappings << {
           pattern: compile(pattern),
-          priority: priority,
+          priority: priority.to_i,
           conditions: conditions,
           target: target
-        })
+        }
       end
       alias :<< :map
       
@@ -242,8 +240,6 @@ module Scorched
         env
       end
       env['scorched.root_path'] ||= env['SCRIPT_NAME']
-      env['scorched.path_info'] ||= env['PATH_INFO']
-      env['scorched.script_name'] ||= env['SCRIPT_NAME']
       @request = Request.new(env)
       @response = Response.new
     end
@@ -267,7 +263,16 @@ module Scorched
           pass if config[:auto_pass] && eligable_matches.empty?
           run_filters(:before)
           begin
-            eligable_matches.each { |match|
+            # Re-order matches based on media_type, ensuring priority and definition order are respected appropriately.
+            eligable_matches.each_with_index.sort_by { |m,idx|
+              [
+                m.mapping[:priority] || 0,
+                [*m.mapping[:conditions][:media_type]].map { |type|
+                  env['rack-accept.request'].media_type.qvalue(type)
+                }.max || 0,
+                -idx
+              ]
+            }.reverse.each { |match,|
               request.breadcrumb << match
               break if catch(:pass) {
                 target = match.mapping[:target]
@@ -276,8 +281,8 @@ module Scorched
                     instance_exec(&target)
                   else
                     target.call(env.merge(
-                      'SCRIPT_NAME' => request.matched_path,
-                      'PATH_INFO' => request.unmatched_path[match.path.length..-1]
+                      'SCRIPT_NAME' => request.matched_path.chomp('/'),
+                      'PATH_INFO' => request.unmatched_path[match.path.chomp('/').length..-1]
                     ))
                   end
                 end
