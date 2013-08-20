@@ -436,7 +436,7 @@ module Scorched
       template = if Symbol === string_or_file
         file = string_or_file.to_s
         file = file << ".#{engine}" unless derived_engine
-        file = File.join(dir, file) if dir
+        file = File.expand_path(file, dir) if dir
         # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
         template_cache.fetch(:file, tilt_engine, file, tilt_options) do
           tilt_engine.new(file, nil, tilt_options)

@@ -3,7 +3,8 @@ Changelog
 
 ### v0.17-pre
 * Fixes an issue introduced in v0.16 where joining `SCRIPT_NAME` and `PATH_INFO` would sometimes produce a path with two forward slashes, and a related issue where `PATH_INFO` would sometimes be missing a leading forward slash when it should have had one.
-* Mappings are now sorted by best matching `media type` on-top in addition to definition order and priority. This means mappings are now sorted at request-time rather than at the time they're mapped.
+* Mappings are now sorted by the best matching `media type` in addition to the existing logic that included definition order and priority. This required that mappings be sorted at request-time rather than at the time they're mapped. Note, because of limitations of `rack-accept`, this doesn't completely respect the HTTP spec when it comes to prioritising which media type to serve for a given request. Full support for the HTTP spec is intended for a future release.
+* File path references to views are now joined to the view directory using #expand_path. This allows views to be specified with an absolute path (effectively ignoring the view directory), and better support for relative paths.
 
 ### v0.16
 * A copy of the Rack env hash is now handed off to sub-controllers and other Rack-callable objects, with `PATH_INFO` and `SCRIPT_NAME` now set to appropriate values, bring Scorched inline with the Rack specification. This differs from the original behaviour which was to just forward on the original env hash unmodified.

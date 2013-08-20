@@ -923,7 +923,7 @@ module Scorched
         app.render_defaults.each { |k,v| app.render_defaults[k] = nil }
       end
 
-      it "can render a file, relative to the application root" do
+      it "can render a file, relative to the working directory" do
         app.get('/') do
           render(:'views/main.erb').should == "3 for me"
         end
@@ -937,11 +937,23 @@ module Scorched
         rt.get('/')
       end
 
-      it "takes an optional view directory, relative to the application root" do
+      it "takes an optional view directory, relative to the working directory" do
         app.get('/') do
           render(:'main.erb', dir: 'views').should == "3 for me"
         end
         rt.get('/')
+      end
+      
+      it "properly respects absolute and relative file paths in respect to the view directory" do
+        app.get('/relative') do
+          render(:'../views/main.erb', dir: 'views')
+        end
+        app.get('/absolute') do
+          File.dirname(__FILE__)
+          render(:"#{File.dirname(__FILE__)}/views/main.erb", dir: 'views')
+        end
+        rt.get('/relative').body.should == "3 for me"
+        rt.get('/absolute').body.should == "3 for me"
       end
 
       it "takes an optional block to be yielded by the view" do
