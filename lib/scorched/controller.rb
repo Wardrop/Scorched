@@ -72,7 +72,7 @@ module Scorched
       handled: proc { |bool|
         @_handled == bool
       },
-      proc: proc { |*blocks|
+      proc: proc { |blocks|
         [*blocks].all? { |b| instance_exec(&b) }
       },
       user_agent: proc { |user_agent| 
