@@ -1,6 +1,9 @@
 Changelog
 =========
 
+### v0.18
+* Redirects now use a 303 or 302 HTTP status code by default, depending on HTTP version (similar logic to Sinatra). Trailing slash redirects (triggered by :strip_trailing_slash) still uses a 307 status.
+
 ### v0.17
 * Fixes an issue introduced in v0.16 where joining `SCRIPT_NAME` and `PATH_INFO` would sometimes produce a path with two forward slashes, and a related issue where `PATH_INFO` would sometimes be missing a leading forward slash when it should have had one.
 * Mappings are now sorted by the best matching `media type` in addition to the existing logic that included definition order and priority. This required that mappings be sorted at request-time rather than at the time they're mapped. Note, because of limitations of `rack-accept`, this doesn't completely respect the HTTP spec when it comes to prioritising which media type to serve for a given request. Full support for the HTTP spec is intended for a future release.
