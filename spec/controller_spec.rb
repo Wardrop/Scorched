@@ -631,6 +631,33 @@ module Scorched
       end
     end
     
+    describe 'redirecting' do
+      it "redirects using 303 or 302 by default, depending on HTTP version" do
+        app.get('/cat') { redirect '/dog' }
+        response = rt.get('/cat', {}, 'HTTP_VERSION' => 'HTTP/1.1')
+        response.status.should == 303
+        response.location.should == '/dog'
+        response = rt.get('/cat', {}, 'HTTP_VERSION' => 'HTTP/1.0')
+        response.status.should == 302
+        response.location.should == '/dog'
+      end
+      
+      it "allows the HTTP status to be overridden" do
+        app.get('/') { redirect '/somewhere', 308 }
+        rt.get('/').status.should == 308
+      end
+      
+      it "halts the request after redirect" do
+        var = false
+        app.get('/') do
+          redirect '/somewhere'
+          var = true
+        end
+        rt.get('/')
+        var.should == false
+      end
+    end
+    
     describe "passing" do
       it "invokes the next match" do
         app.get('/') { response.body << 'hello'; pass }

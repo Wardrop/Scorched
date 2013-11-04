@@ -72,7 +72,7 @@ module Scorched
       handled: proc { |bool|
         @_handled == bool
       },
-      proc: proc { |*blocks|
+      proc: proc { |blocks|
         [*blocks].all? { |b| instance_exec(&b) }
       },
       user_agent: proc { |user_agent| 
@@ -257,7 +257,7 @@ module Scorched
       begin
         catch(:halt) do
           if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
-            redirect(request.path.chomp('/'))
+            redirect(request.path.chomp('/'), 307)
           end
           eligable_matches = matches.reject { |m| m.failed_condition }
           pass if config[:auto_pass] && eligable_matches.empty?
@@ -344,7 +344,7 @@ module Scorched
       invert ? !retval : !!retval
     end
     
-    def redirect(url, status = 307)
+    def redirect(url, status = (env['HTTP_VERSION'] == 'HTTP/1.1') ? 303 : 302)
       response['Location'] = url
       halt(status)
     end
