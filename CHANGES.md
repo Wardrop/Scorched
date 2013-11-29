@@ -2,7 +2,7 @@ Changelog
 =========
 
 ### v0.19
-* The behaviour of wildcards '*' and '**' (and their _named_ equivalents) have been reverted to their original behviour of matching one or more characters, instead of zero or more. This means `/*` will no longer match `/`. Adding a question mark directly after a wildcard will have that wildcard match zero or more character, instead of one or more. So the pattern `/*?` will match both `/` and `/about`.
+* The behaviour of wildcards `*` and `**` (and their _named_ equivalents) have been reverted to their original behviour of matching one or more characters, instead of zero or more. This means `/*` will no longer match `/`. Adding a question mark directly after a wildcard will have that wildcard match zero or more character, instead of one or more. So the pattern `/*?` will match both `/` and `/about`.
 
 ### v0.18
 * Redirects now use a 303 or 302 HTTP status code by default, depending on HTTP version (similar logic to Sinatra). Trailing slash redirects (triggered by :strip_trailing_slash) still uses a 307 status.
