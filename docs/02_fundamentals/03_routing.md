@@ -13,7 +13,7 @@ map pattern: '/', priority: -99, conditions: {method: ['POST', 'PUT', 'DELETE']}
 
 The position the new mapping is inserted into the mapping hash is determined by it's priority, and the priority of the mappings already defined. This avoids re-sorting the mapping hash every time it's added to. This isn't a performance consideration, but is required to maintain the natural insert order of the mappings which have identical priorities (such as the default 0).
 
-A `mapping` method is also provided as means to access all defined mappings on a controller, but it should be considered read-only for the reasons just stated.
+A `mappings` method is also provided as means to access all defined mappings on a controller, but it should be considered read-only for the reasons just stated.
 
 Route Helpers
 -------------
