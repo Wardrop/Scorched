@@ -57,10 +57,11 @@ Patterns can be defined as either a String or Regexp.
 ###String Patterns
 String patterns are compiled into Regexp patterns corresponding to the following rules:
 
-* `*` - Matches zero or more characters, excluding the forward slash.
-* `**` - Matches zero or more characters, including the forward slash.
+* `*` - Matches one or more characters, excluding the forward slash.
+* `**` - Matches one or more characters, including the forward slash.
 * `:param` - Same as `*` except the capture is named to whatever the string following the single-colon.
 * `::param` - Same as `**` except the capture is named to whatever the string following the double-colon.
+* `?` - If placed directly after a wildcard capture, matches zero or more characters instead of one or more. For example, the patterns `/*?` and `/::title?` would match both `/` and `/about`.
 * `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For patterns defined using the route helpers, e.g. `Controller.route`, `Controller.get`, this is implied. 
 
 ###Regex Patterns

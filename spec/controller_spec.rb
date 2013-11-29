@@ -122,20 +122,38 @@ module Scorched
         req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
       
-      example "wildcards match zero or more characters" do
+      example "wildcards match one or more characters" do
         app << {pattern: '/*', target: proc { |env| [200, {}, ['ok']] }}
-        rt.get('/').status.should == 200
+        rt.get('/').status.should == 404
         rt.get('/dog').status.should == 200
         app.mappings.clear
         app << {pattern: '/**', target: proc { |env| [200, {}, ['ok']] }}
-        rt.get('/').status.should == 200
+        rt.get('/').status.should == 404
         rt.get('/dog/cat').status.should == 200
         app.mappings.clear
         app << {pattern: '/:page', target: proc { |env| [200, {}, ['ok']] }}
-        rt.get('/').status.should == 200
+        rt.get('/').status.should == 404
         rt.get('/dog').status.should == 200
         app.mappings.clear
         app << {pattern: '/::page', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 404
+        rt.get('/dog/cat').status.should == 200
+      end
+      
+      example "wildcards can optionally match zero or more characters" do
+        app << {pattern: '/*?', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog').status.should == 200
+        app.mappings.clear
+        app << {pattern: '/**?', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog/cat').status.should == 200
+        app.mappings.clear
+        app << {pattern: '/:page?', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/').status.should == 200
+        rt.get('/dog').status.should == 200
+        app.mappings.clear
+        app << {pattern: '/::page?', target: proc { |env| [200, {}, ['ok']] }}
         rt.get('/').status.should == 200
         rt.get('/dog/cat').status.should == 200
       end

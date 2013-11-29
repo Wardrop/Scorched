@@ -143,8 +143,8 @@ module Scorched
       # inherits from, a mapping hash for setting conditions and so on, and of course a block which defines the
       # controller class.
       #
-      # It's worth noting, however obvious, that the resulting class will only be a controller if the parent class is
-      # (or inherits from) a Scorched::Controller.
+      # It's worth noting, however obvious, that the resulting class will only be a Scorched::Controller if the parent 
+      # class is, or inherits from, a Scorched::Controller.
       def controller(pattern = '/', parent_class = self, **mapping, &block)
         c = Class.new(parent_class, &block)
         c.config[:auto_pass] = true if parent_class < Scorched::Controller
@@ -211,19 +211,20 @@ module Scorched
         return pattern if Regexp === pattern
         raise Error, "Can't compile URL of type #{pattern.class}. Must be String or Regexp." unless String === pattern
         match_to_end = !!pattern.sub!(/\$$/, '') || match_to_end
-        regex_pattern = pattern.split(%r{(\*{1,2}|(?<!\\):{1,2}[^/*$]+)}).each_slice(2).map { |unmatched, match|
+        compiled_pattern = pattern.split(%r{(\*{1,2}\??|(?<!\\):{1,2}[^/*$]+\??)}).each_slice(2).map { |unmatched, match|
           Regexp.escape(unmatched) << begin
+            op = (match && match[-1] == '?' && match.chomp!('?')) ? '*' : '+'
             if %w{* **}.include? match
-              match == '*' ? "([^/]*)" : "(.*)"
+              match == '*' ? "([^/]#{op})" : "(.#{op})"
             elsif match
-              match[0..1] == '::' ? "(?<#{match[2..-1]}>.*)" : "(?<#{match[1..-1]}>[^/]*)"
+              match[0..1] == '::' ? "(?<#{match[2..-1]}>.#{op})" : "(?<#{match[1..-1]}>[^/]#{op})"
             else
               ''
             end
           end
         }.join
-        regex_pattern << '$' if match_to_end
-        Regexp.new(regex_pattern)
+        compiled_pattern << '$' if match_to_end
+        Regexp.new(compiled_pattern)
       end
     end
     
