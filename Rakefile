@@ -26,7 +26,7 @@ desc 'Displays a pre-release message, requiring user input'
 task :prerelease do
   puts <<-MSG
 
-About to release Scorched v#{Scorched::VERSION}. Please ensure CHANGES log is up-to-date, all relevant documentation is updated, and that any new files not under version control have been added/staged. Press any key to continue...
+About to release Scorched v#{Scorched::VERSION}. Please ensure CHANGES log is up-to-date, all relevant documentation is updated, changes on Github master repository have been pulled and merged, and that any new files not under version control have been added/staged. Press any key to continue...
   MSG
   STDIN.gets
 end
