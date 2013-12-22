@@ -11,7 +11,7 @@ Before and After filters allow pre- and post-processing of requests. They are ex
 
 ```ruby
 before do
-  raise Error, "Must be logged in to access this site" unless session[:logged_in] == true
+  raise "Must be logged in to access this site" unless session[:logged_in] == true
 end
 ```
 
@@ -31,7 +31,15 @@ after status: 404 do
 end
 ```
 
-Your imagination is the only limitation.
+An optional _force_ option exists which ensures the filter is always run, even if another filter halts the request.
+
+```ruby
+after force: true do
+  # Close open file handles or something
+end
+```
+
+How you use filters is up to your own imagination and creative problem solving.
 
 
 Error Filters
@@ -40,10 +48,10 @@ Error filters are processed like regular filters, except they're called whenever
 
 Error filters can handle exceptions raised from within the request target, as well as those raised within _before_ and _after_ filters. The way error filters have been implemented, allows exceptions raised within the request target to be handled before running the _after_ filters. This means that _after_ filters are still run as long as exceptions that occurred within the request target are handled.
 
-Error filters can target only specific types of exception class, in much the same way as a typical Ruby rescue block.
+Error filters can target only specific types of exception class, in much the same way as a typical Ruby rescue block. In the following example, the error filter is only executed when an uncaught PermissionError exception is raised, and when a made-up `catch_exceptions` condition evaluates to true.
 
 ```ruby
-error PermissionError do |e|
+error PermissionError, catch_exceptions: true do |e|
   flash[:error] = "You do not have the appropriate permission to perform that action: #{e.message}"
 end
 ```

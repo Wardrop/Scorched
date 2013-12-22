@@ -15,7 +15,7 @@ module Scorched
     config << {
       :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
       :cache_templates => true,
-      :logger => nil,
+      :logger => Logger.new(STDOUT),
       :show_exceptions => false,
       :show_http_error_pages => false, # If true, shows the default Scorched HTTP error page.
       :static_dir => false, # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
@@ -32,7 +32,6 @@ module Scorched
     }
     
     if ENV['RACK_ENV'] == 'development'
-      config[:logger] = Logger.new(STDOUT)
       config[:show_exceptions] = true
       config[:static_dir] = 'public'
       config[:cache_templates] = false
@@ -136,20 +135,19 @@ module Scorched
       end
       alias :<< :map
       
-      # Creates a new controller as a sub-class of self (by default), mapping it to self using the provided mapping
-      # hash if one is provided. Returns the new anonymous controller class.
+      # Maps a new ad-hoc or predefined controller.
       #
-      # Takes three optional arguments and a block: a pattern, a parent class from which the generated controller class 
-      # inherits from, a mapping hash for setting conditions and so on, and of course a block which defines the
-      # controller class.
-      #
-      # It's worth noting, however obvious, that the resulting class will only be a Scorched::Controller if the parent 
-      # class is, or inherits from, a Scorched::Controller.
-      def controller(pattern = '/', parent_class = self, **mapping, &block)
-        c = Class.new(parent_class, &block)
-        c.config[:auto_pass] = true if parent_class < Scorched::Controller
-        self << {pattern: pattern, target: c}.merge(mapping)
-        c
+      # If a block is given, creates a new controller as a sub-class of _klass_ (_self_ by default), otherwise maps 
+      # _klass_ itself. Returns the new anonymous controller class if a block is given, or _klass_ otherwise.
+      def controller(pattern = '/', klass = self, **mapping, &block)
+        if block_given?
+          controller = Class.new(klass, &block)
+          controller.config[:auto_pass] = true if klass < Scorched::Controller
+        else
+          controller = klass
+        end
+        self << {pattern: pattern, target: controller}.merge(mapping)
+        controller
       end
       
       # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
@@ -167,7 +165,7 @@ module Scorched
       #     patch(pattern = nil, priority = nil, **conds, &block)
       def route(pattern = nil, priority = nil, **conds, &block)
         target = lambda do
-          response.body = instance_exec(*request.captures, &block)
+          response.body = instance_exec(*[request.captures].flatten, &block)
           response
         end
         [*pattern].compact.each do |pattern|
@@ -184,22 +182,31 @@ module Scorched
         end
       end
       
-      # Defines a filter of +type+. Helper methods are provided as syntactic sugar for each filter type.
-      # +args+ is used internally by Scorched for passing additional arguments to the filter, such as the exception in
-      # the case of error blocks.
-      # :call-seq:
-      #     filter(type, *args, **conds, &block)
-      #     before(*args, **conds, &block)
-      #     after(*args, **conds, &block)
-      #     error(*args, **conds, &block)
-      def filter(type, *args, **conds, &block)
-        filters[type.to_sym] << {args: args, conditions: conds, proc: block}
+      # Defines a filter of +type+. 
+      # +args+ is used internally by Scorched for passing additional arguments to some filters, such as the exception in
+      # the case of error filters. 
+      def filter(type, args: nil, force: nil, conditions: nil, **more_conditions, &block)
+        more_conditions.merge!(conditions || {})
+        filters[type.to_sym] << {args: args, force: force, conditions: more_conditions, proc: block}
       end
       
-      ['before', 'after', 'error'].each do |type|
-        define_method(type) do |*args, &block|
-          filter(type, *args, &block)
-        end
+      # Syntactic sugar for defining a before filter.
+      # If +force+ is true, the filter is run even if another filter halts the request.
+      def before(force: false, **conditions, &block)
+        filter(:before, force: force, conditions: conditions, &block)
+      end
+      
+      # Syntactic sugar for defining an after filter.
+      # If +force+ is true, the filter is run even if another filter halts the request.
+      def after(force: false, **conditions, &block)
+        filter(:after, force: force, conditions: conditions, &block)
+      end
+      
+      # Syntactic sugar for defining an error filter.
+      # Takes one or more optional exception classes for which this error filter should handle. Handles all exceptions
+      # by default.
+      def error(*classes, **conditions, &block)
+        filter(:error, args: classes, conditions: conditions, &block)
       end
       
     private
@@ -211,7 +218,7 @@ module Scorched
         return pattern if Regexp === pattern
         raise Error, "Can't compile URL of type #{pattern.class}. Must be String or Regexp." unless String === pattern
         match_to_end = !!pattern.sub!(/\$$/, '') || match_to_end
-        compiled_pattern = pattern.split(%r{(\*{1,2}\??|(?<!\\):{1,2}[^/*$]+\??)}).each_slice(2).map { |unmatched, match|
+        compiled = pattern.split(%r{(\*{1,2}\??|(?<!\\):{1,2}[^/*$]+\??)}).each_slice(2).map { |unmatched, match|
           Regexp.escape(unmatched) << begin
             op = (match && match[-1] == '?' && match.chomp!('?')) ? '*' : '+'
             if %w{* **}.include? match
@@ -223,8 +230,8 @@ module Scorched
             end
           end
         }.join
-        compiled_pattern << '$' if match_to_end
-        Regexp.new(compiled_pattern)
+        compiled << '$' if match_to_end
+        Regexp.new(compiled)
       end
     end
     
@@ -245,13 +252,14 @@ module Scorched
       @response = Response.new
     end
     
+    # This is where the magic happens.
     def action
       inner_error = nil
       rescue_block = proc do |e|
         raise unless filters[:error].any? do |f|
-          (f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }) &&
-          !check_for_failed_condition(f[:conditions]) &&
-          instance_exec(e, &f[:proc])
+          if !f[:args] || f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }
+            instance_exec(e, &f[:proc]) unless check_for_failed_condition(f[:conditions])
+          end
         end
       end
 
@@ -273,22 +281,25 @@ module Scorched
                 }.max || 0,
                 -idx
               ]
-            }.reverse.each { |match,|
+            }.reverse.each { |match,idx|
               request.breadcrumb << match
-              break if catch(:pass) {
+              catch(:pass) {
                 target = match.mapping[:target]
-                response.merge! begin
-                  if Proc === target
-                    instance_exec(&target)
-                  else
-                    target.call(env.merge(
-                      'SCRIPT_NAME' => request.matched_path.chomp('/'),
-                      'PATH_INFO' => request.unmatched_path[match.path.chomp('/').length..-1]
-                    ))
+                catch(:halt) do
+                  response.merge! begin
+                    if Proc === target
+                      instance_exec(&target)
+                    else
+                      target.call(env.merge(
+                        'SCRIPT_NAME' => request.matched_path.chomp('/'),
+                        'PATH_INFO' => request.unmatched_path[match.path.chomp('/').length..-1]
+                      ))
+                    end
                   end
                 end
                 @_handled = true
               }
+              break if @_handled
               request.breadcrumb.pop
             }
             unless @_handled
@@ -298,9 +309,13 @@ module Scorched
             rescue_block.call(inner_error)
           end
           run_filters(:after)
+          true
+        end || begin
+          run_filters(:before, true)
+          run_filters(:after, true)
         end
       rescue => outer_error
-        outer_error == inner_error ? raise : rescue_block.call(outer_error)
+        outer_error == inner_error ? raise : catch(:halt) { rescue_block.call(outer_error) }
       end
       response.finish
     end
@@ -388,7 +403,7 @@ module Scorched
       session[key]
     end
     
-    after do
+    after(force: true) do
       env['scorched.flash'].each { |k,v| session[k] = v } if session && env['scorched.flash']
     end
     
@@ -527,20 +542,29 @@ module Scorched
     
   private
   
-    def run_filters(type)
+    def run_filters(type, forced_only = false)
       tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
-      filters[type].reject{ |f| tracker[type].include? f }.each do |f|
+      filters[type].reject{ |f| tracker[type].include?(f) || (forced_only && !f[:force]) }.each do |f|
         unless check_for_failed_condition(f[:conditions])
           tracker[type] << f
-          instance_exec(&f[:proc])
+          if forced_only
+            catch(:halt) do
+              instance_exec(&f[:proc]); true
+            end or log.warn "Ignored halt while running forced filters."
+          else
+            instance_exec(&f[:proc])
+          end
         end
       end
     end
     
-    def log(type, message)
+    def log(type = nil, message = nil)
       config[:logger].progname ||= 'Scorched'
-      type = Logger.const_get(type.to_s.upcase)
-      config[:logger].add(type, message)
+      if(type)
+        type = Logger.const_get(type.to_s.upcase)
+        config[:logger].add(type, message)
+      end
+      config[:logger]
     end
   end
 end

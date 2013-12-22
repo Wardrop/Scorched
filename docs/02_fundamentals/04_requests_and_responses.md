@@ -20,9 +20,9 @@ Halting Requests
 ----------------
 There may be instances we're you want to shortcut out-of processing the current request. The `halt` method allows you to do this, though it's worth clarifying its behaviour.
 
-When `halt` is called within a route, it simply exists out of that route, and begins processing any _after_ filters. Halt can also be used within a _before_ or _after_ filter, in which case any remaining filters in the current controller are skipped.
+When `halt` is called within a route, it simply exits out of that route, and begins processing any _after_ filters. Halt can also be used within a _before_ or _after_ filter, in which case any remaining filters in the current controller are skipped, with the exception of _forced_ filters (see documentation on filters).
 
-Calls to `halt` don't propagate up the controller chain. They're local to the controller. A call to `halt` is equivalent to doing a manual `throw :halt`. Calling `halt` is often preferred though because as well as being syntactically sweeter, it can take an optional argument to set the response status and body, which is something you likely want to do when halting a request.
+Calls to `halt` don't propagate up the controller chain. They're caught within the controller they're thrown. A call to `halt` is equivalent to doing a manual `throw :halt`. Calling `halt` is often preferred though because as well as being syntactically sweeter, it can take an optional argument to set the response status and body, which is something you likely want to do when halting a request.
 
 
 Passing Requests

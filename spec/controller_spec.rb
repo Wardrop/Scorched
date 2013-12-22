@@ -270,6 +270,16 @@ module Scorched
         end
       end
       
+      it "provides wildcard captures as arguments" do
+        app.get('/*/**') { |a,b| "#{a}#{b}" }
+        rt.get('/hello/there/dude').body.should == 'hellothere/dude'
+      end
+      
+      it "provides named captures as a single hash argument" do
+        app.get('/:given_name/::surname') { |h| "#{h[:given_name]} #{h[:surname]}" }
+        rt.get('/bob/smith').body.should == 'bob smith'
+      end
+      
       it "always matches to the end of the URL (implied $)" do
         app.get('/') { 'awesome '}
         rt.get('/dog').status.should == 404
@@ -352,9 +362,9 @@ module Scorched
           response.body.should == 'roof'
         end
       
-        it "inherits from parent class, or any other class" do
-          app.controller.superclass.should == app
-          app.controller('/', String).superclass.should == String
+        it "inherits from parent class, or otherwise the specified class" do
+          app.controller{}.superclass.should == app
+          app.controller('/', String){}.superclass.should == String
         end
       
         it "can take mapping options" do
@@ -376,6 +386,14 @@ module Scorched
           app.get('/') { 'hello' }
           rt.get('/').body.should == 'hello'
           filters_run.should == 0
+        end
+        
+        it "can be used to map a predefined controller" do
+          person_controller = Class.new(Scorched::Controller) do
+            get('/name') { 'George' }
+          end
+          app.controller '/person', person_controller
+          rt.get('/person/name').body.should == 'George'
         end
       end
     end
@@ -547,6 +565,12 @@ module Scorched
         rt.get('/').body.should == 'StandardErrorArgumentError'
       end
       
+      they "swallow halts when executed in an outer context" do
+        app.before { raise "Big bad error" }
+        app.error { throw :halt }
+        rt.get('/') # Would otherwise bomb out with uncaught throw.
+      end
+      
       they "only get called once per error" do
         times_called = 0
         app.error { times_called += 1 }
@@ -621,8 +645,8 @@ module Scorched
       end
       
       it "takes an optional status" do
-        app.get('/') { halt 401 }
-        rt.get('/').status.should == 401
+        app.get('/') { halt 600 }
+        rt.get('/').status.should == 600
       end
       
       it "takes an optional response body" do
@@ -631,21 +655,41 @@ module Scorched
       end
       
       it "can take a status and a response body" do
-        app.get('/') { halt 401, 'cool' }
-        rt.get('/').status.should == 401
+        app.get('/') { halt 600, 'cool' }
+        rt.get('/').status.should == 600
         rt.get('/').body.should == 'cool'
       end
       
-      it "skips processing filters" do
-        app.after { response.status = 403 }
+      it "still processes filters" do
+        app.after { response.status = 600 }
         app.get('/') { halt }
-        rt.get('/').status.should == 200
+        rt.get('/').status.should == 600
       end
       
-      it "short circuits filters if halted within filter" do
-        app.before { halt }
-        app.after { response.status = 403 }
-        rt.get('/').status.should_not == 403
+      describe "within filters" do
+        it "short circuits filters if halted within filter" do
+          app.before { halt }
+          app.after { response.status = 600 }
+          rt.get('/').status.should_not == 600
+        end
+        
+        it "forced filters are always run" do
+          app.before { halt }
+          app.after(force: true) { response.status = 600 }
+          app.after { response.status = 700 } # Shouldn't run because it's not forced
+          app.get('/') { 'hello' }
+          rt.get('/').status.should == 600
+        end
+        
+        it "halting within a forced filter still runs other forced filters" do
+          app.before { halt }
+          app.before(force: true) { halt }
+          app.before(force: true) { response.status = 600 }
+          app.get('/') { 'hello' }
+          rt.get('/').status.should == 600
+          app.after(force: true) { response.status = 700 }
+          rt.get('/').status.should == 700
+        end
       end
     end
     
@@ -673,6 +717,14 @@ module Scorched
         end
         rt.get('/')
         var.should == false
+      end
+      
+      it "works in filters" do
+        app.error { redirect '/somewhere' }
+        app.get('/') { raise "Some error" }
+        rt.get('/').location.should == '/somewhere'
+        app.before { redirect '/somewhere_else' }
+        rt.get('/').location.should == '/somewhere_else'
       end
     end
     

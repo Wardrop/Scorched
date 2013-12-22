@@ -88,17 +88,10 @@ You can use nesting and inheritance exclusively, or together, depending on your 
 
 Controller Helper
 -----------------
-There is a more succinct way of defining sub-controllers, and that's with the `controller` helper. Here's the previous example re-written using the `controller` helper.
+There is a more succinct way of mapping and defining sub-controllers, and that's with the `controller` helper. Here's the previous example cut-down and re-written using the `controller` helper.
 
 ``` ruby
 class MyApp < Scorched::Controller
-  render_defaults[:dir] = 'views'
-  render_defaults[:layout] = :main
-  
-  conditions[:user] = proc { |usernames|
-    [*usernames].include? 'bob'
-  }
-  
   get '/' do
     bold "Hello there"
   end
@@ -117,7 +110,7 @@ class MyApp < Scorched::Controller
 end
 ```
 
-The `controller` helper takes an optional URL pattern as it's first argument, an optional parent class as it's second, and finally a mapping hash as its third optional argument, where you can define a priority, conditions, or override the URL pattern. Of course, the `controller` helper takes a block as well, which defines the body of the new controller class.
+The `controller` helper takes an optional URL pattern as it's first argument, an optional parent class as its second, and finally a mapping hash as its third optional argument, where you can define a priority, conditions, or override the URL pattern. Of course, the `controller` helper takes a block as well, which defines the body of the new controller class.
 
 The optional URL pattern defaults to `'/'` which means it's essentially a match-all mapping. In addition, the generated controller has `:auto_pass` set to `true` by default (refer to configuration documentation for more information). This is a handy combination for grouping a set of routes in their own scope, with their own methods, filters, configuration, etc. 
 
@@ -152,6 +145,18 @@ end
 ```
 
 That example, while serving no practical purpose, hopefully demonstrates how you can combine various constructs with sub-controllers, to come up with DRY creative solutions.
+
+Finally, the `controller` helper can also be used a shortcut to map one controller to another, where the given class is mapped directly, instead of being the parent of a new controller class. These two examples are essentially equivalent:
+
+``` ruby
+ControllerA << {pattern: '/sub', target: ControllerB}
+
+# Or
+
+class ControllerA
+  controller '/', ControllerB # Note that no block was given
+end
+```
 
 
 The Root Controller

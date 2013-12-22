@@ -1,8 +1,18 @@
 Changelog
 =========
 
+_Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading Scorched version for your project, review this changelog carefully._
+
+### v0.20
+* _After_ filters are now still processed when a request is halted. This restores the original behaviour prior to version 0.8. This fixes an issue where halting the request after setting flash session data would cause the request to bomb-out.
+* As an extension of the change above, filters can now be marked as _forced_ using the new `force` option, which if true, means the filter will run even if the request is halted within another filter (including within another forced filter). This ensures a particular filter is run for every request. This required changing the public interface for the _filter_ method. The sugar methods _before_, _after_, and _error_ have remained backwards compatible. 
+* Named captures are now passed to route proc's as a single hash argument. The previous behaviour was an oversight.
+* Halting within an error filter is now swallowed if the error filter is invoked by an error raised in a before or after filter.
+* The `controller` helper can now be used to map predefined controllers simply by omitting the block, which is now optional. This a more convenient means of mapping controllers as compared to the more barebones `map` method.
+* `log` method now returns the log object. Method arguments are also now optional, meaning you can use the more natural logger interface if you prefer, e.g. `log.info "hello"`.
+
 ### v0.19
-* The behaviour of wildcards `*` and `**` (and their _named_ equivalents) have been reverted to their original behviour of matching one or more characters, instead of zero or more. This means `/*` will no longer match `/`. Adding a question mark directly after a wildcard will have that wildcard match zero or more character, instead of one or more. So the pattern `/*?` will match both `/` and `/about`.
+* The behaviour of wildcards `*` and `**` (and their _named_ equivalents) have been reverted to their original behaviour of matching one or more characters, instead of zero or more. This means `/*` will no longer match `/`. Adding a question mark directly after a wildcard will have that wildcard match zero or more character, instead of one or more. So the pattern `/*?` will match both `/` and `/about`.
 
 ### v0.18
 * Redirects now use a 303 or 302 HTTP status code by default, depending on HTTP version (similar logic to Sinatra). Trailing slash redirects (triggered by :strip_trailing_slash) still uses a 307 status.

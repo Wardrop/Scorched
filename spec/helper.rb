@@ -3,6 +3,8 @@ ENV['RACK_ENV'] = 'production'
 require 'rack/test'
 require_relative '../lib/scorched.rb'
 
+Scorched::Controller.config[:logger] = Logger.new(nil)
+
 module Scorched
   class SimpleCounter
     def initialize(app)

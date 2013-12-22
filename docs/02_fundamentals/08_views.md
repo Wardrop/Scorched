@@ -22,3 +22,10 @@ When a layout is given, a subsequent call to `render` is made, with the rendered
 Partials
 --------
 There are cases where you may want a view to be composed of more than just a layout and a single view. The view may contain one or more sub-views, commonly referred to as partials. Scorched makes provisions for this by ignoring the default layout when `render` is called within a view, hence negating the requirement to explicitly override the layout.
+
+Helpers
+-------
+No explicit distinction is made between a controller helper and a view helper, as both share the same context. There are however some helper methods intended primarily for views.
+
+* `absolute` - Returns the absolute URL of the web application root, with the optional argument joined to the end. For example, if you're application was mounted under example.com/myapp/: `absolute '/about' #=> /myapp/about`
+* `url` - Same as absolute, except returns the full URL, e.g. `url '/about' #=> http://example.com/myapp/about`.
