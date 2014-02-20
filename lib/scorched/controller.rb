@@ -1,3 +1,5 @@
+require 'forwardable'
+
 module Scorched
   TemplateCache = Tilt::Cache.new
   
@@ -165,7 +167,8 @@ module Scorched
       #     patch(pattern = nil, priority = nil, **conds, &block)
       def route(pattern = nil, priority = nil, **conds, &block)
         target = lambda do
-          response.body = instance_exec(*[request.captures].flatten, &block)
+          args = captures.respond_to?(:values) ? captures.values : captures
+          response.body = instance_exec(*args, &block)
           response
         end
         [*pattern].compact.each do |pattern|
@@ -386,6 +389,10 @@ module Scorched
     def session
       env['rack.session']
     end
+    
+    # Delegate a few common `request` methods for conveniance.
+    extend Forwardable
+    def_delegators :request, :captures
     
     # Flash session storage helper.
     # Stores session data until the next time this method is called with the same arguments, at which point it's reset.

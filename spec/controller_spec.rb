@@ -271,12 +271,14 @@ module Scorched
       end
       
       it "provides wildcard captures as arguments" do
-        app.get('/*/**') { |a,b| "#{a}#{b}" }
-        rt.get('/hello/there/dude').body.should == 'hellothere/dude'
+        app.get('/*/**') { |a,b| "#{a} #{b}" }
+        rt.get('/hello/there/dude').body.should == 'hello there/dude'
       end
       
-      it "provides named captures as a single hash argument" do
-        app.get('/:given_name/::surname') { |h| "#{h[:given_name]} #{h[:surname]}" }
+      it "provides named captures as individual arguments for each value" do
+        app.get('/:given_name') { |a| a }
+        app.get('/:given_name/::surname') { |a,b| "#{a} #{b}" }
+        rt.get('/bob').body.should == 'bob'
         rt.get('/bob/smith').body.should == 'bob smith'
       end
       
@@ -1215,6 +1217,13 @@ module Scorched
           end
           rt.get('https://scorchedrb.com:73/sub2').body.should == '/'
         end
+      end
+    end
+    
+    describe "delegators" do
+      it "delegates captures" do
+        app.get('/:id') { captures[:id] }
+        rt.get('/587').body.should == '587'
       end
     end
 
