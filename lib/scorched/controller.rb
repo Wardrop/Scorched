@@ -28,7 +28,7 @@ module Scorched
       :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
       :engine => :erb,
       :locals => {},
-      :tilt => {}, # Options intended for Tilt. This gets around potentialkey name conflicts between Scorched and the renderer invoked by Tilt. For example, if you had to specify an `:engine` for the renderer, this allows you to do that without.
+      :tilt => {default_encoding: 'UTF-8'}, # Options intended for Tilt. This gets around potential key name conflicts between Scorched and the renderer invoked by Tilt.
     }
     
     if ENV['RACK_ENV'] == 'development'
@@ -82,13 +82,13 @@ module Scorched
       },
     }
     
-    middleware << proc { |this|
+    middleware << proc { |controller|
       use Rack::Head
       use Rack::MethodOverride
       use Rack::Accept
-      use Scorched::Static, this.config[:static_dir] if this.config[:static_dir]
-      use Rack::Logger, this.config[:logger] if this.config[:logger]
-      use Rack::ShowExceptions if this.config[:show_exceptions]
+      use Scorched::Static, controller.config[:static_dir] if controller.config[:static_dir]
+      use Rack::Logger, controller.config[:logger] if controller.config[:logger]
+      use Rack::ShowExceptions if controller.config[:show_exceptions]
     }
     
     class << self
@@ -265,7 +265,7 @@ module Scorched
 
       begin
         catch(:halt) do
-          if config[:strip_trailing_slash] == :redirect && request.path =~ %r{./$}
+          if config[:strip_trailing_slash] == :redirect && request.path =~ %r{[^/]/+$}
             redirect(request.path.chomp('/'), 307)
           end
           eligable_matches = matches.reject { |m| m.failed_condition }
@@ -449,11 +449,12 @@ module Scorched
       tilt_options = options.merge(tilt || {})
       tilt_engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[engine]
       raise Error, "Invalid or undefined template engine: #{engine.inspect}" unless tilt_engine
+      
       template = if Symbol === string_or_file
         file = string_or_file.to_s
         file = file << ".#{engine}" unless derived_engine
         file = File.expand_path(file, dir) if dir
-        # Tilt still has unresolved file encoding issues. Until that's fixed, we read the file manually.
+        
         template_cache.fetch(:file, tilt_engine, file, tilt_options) do
           tilt_engine.new(file, nil, tilt_options)
         end
@@ -463,7 +464,7 @@ module Scorched
         end
       end
     
-      # The following chunk of code is responsible for preventing the rendering of layouts within views.
+      # The following is responsible for preventing the rendering of layouts within views.
       begin
         original_no_default_layout = @_no_default_layout
         @_no_default_layout = true

@@ -3,6 +3,10 @@ Changelog
 
 _Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading Scorched version for your project, review this changelog carefully._
 
+### v0.21
+* The `:redirect` option for `:strip_trailing_slashes` no longer cause a redirection loop when the request path is set to two or more forward slashes, e.g. '//'
+* Changed default value of `render_defaults[:tilt]` to `{default_encoding: 'UTF-8'}`. This defaults _Tilt_ to using UTF-8 for loading template files, which is desirable 99% of the time.
+
 ### v0.20
 * _After_ filters are now still processed when a request is halted. This restores the original behaviour prior to version 0.8. This fixes an issue where halting the request after setting flash session data would cause the request to bomb-out.
 * As an extension of the change above, filters can now be marked as _forced_ using the new `force` option, which if true, means the filter will run even if the request is halted within another filter (including within another forced filter). This ensures a particular filter is run for every request. This required changing the public interface for the _filter_ method. The sugar methods _before_, _after_, and _error_ have remained backwards compatible. 
