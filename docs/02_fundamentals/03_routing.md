@@ -27,7 +27,7 @@ route '/' do
 end
 
 route '/*', 5, method: ['POST', 'PUT', 'DELETE'] do |capture|
-  "Hmm trying to change #{capture} I see"
+  "Hmm, I see you're trying to change the resource #{capture}"
 end
 ```
 
@@ -62,11 +62,26 @@ String patterns are compiled into Regexp patterns corresponding to the following
 * `:param` - Same as `*` except the capture is named to whatever the string following the single-colon.
 * `::param` - Same as `**` except the capture is named to whatever the string following the double-colon.
 * `?` - If placed directly after a wildcard capture, matches zero or more characters instead of one or more. For example, the patterns `/*?` and `/::title?` would match both `/` and `/about`.
-* `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For patterns defined using the route helpers, e.g. `Controller.route`, `Controller.get`, this is implied. 
+* `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For patterns defined using the route helpers, e.g. `Controller.route`, `Controller.get`, this is implied.
 
 ###Regex Patterns
 Regex patterns offer more power and flexibility than string patterns (naturally). The rules for Regex patterns are identical to String patterns, e.g. they must match from the beginning of the path, etc. 
 
+Captures
+--------
+Captures can be accessed as arguments on the route proc, or via the `captures` helper method, which is shorthand for `request.captures`.
+
+```ruby
+get '/:id' do |id|
+  id == captures[:id]
+end
+
+get '/*/*' do |id, title|
+  [id, title] == captures
+end
+```
+
+The above examples demonstrates the two methods of accessing captures, for both named and anonymous captures. You may notice that while named and anonymous captures are passed to the proc as arguments in the exact same way, the `captures` helper either returns either a `Hash` or an `Array` depending on whether the captures are named or not.
 
 Conditions
 ----------

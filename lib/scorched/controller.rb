@@ -54,7 +54,7 @@ module Scorched
         [*encodings].any? { |encoding| env['rack-accept.request'].encoding? encoding }
       },
       failed_condition: proc { |conditions|
-        if !matches.empty? && matches.all? { |m| m.failed_condition }
+        if !matches.empty? && matches.any? { |m| m.failed_condition } && !@_handled
           [*conditions].include? matches.first.failed_condition[0]
         end
       },
@@ -106,7 +106,7 @@ module Scorched
       def call(env)
         loaded = env['scorched.middleware'] ||= Set.new
         app = lambda do |env|
-          self.new(env).action
+          self.new(env).process
         end
 
         builder = Rack::Builder.new
@@ -255,8 +255,9 @@ module Scorched
       @response = Response.new
     end
     
-    # This is where the magic happens.
-    def action
+    # This is where the magic happens. Applies filters, matches mappings, applies error handlers, catches :halt and
+    # :pass, etc.
+    def process
       inner_error = nil
       rescue_block = proc do |e|
         raise unless filters[:error].any? do |f|
@@ -287,18 +288,8 @@ module Scorched
             }.reverse.each { |match,idx|
               request.breadcrumb << match
               catch(:pass) {
-                target = match.mapping[:target]
                 catch(:halt) do
-                  response.merge! begin
-                    if Proc === target
-                      instance_exec(&target)
-                    else
-                      target.call(env.merge(
-                        'SCRIPT_NAME' => request.matched_path.chomp('/'),
-                        'PATH_INFO' => request.unmatched_path[match.path.chomp('/').length..-1]
-                      ))
-                    end
-                  end
+                  dispatch(match)
                 end
                 @_handled = true
               }
@@ -323,11 +314,27 @@ module Scorched
       response.finish
     end
     
+    # Dispatches the request to the matched target.
+    # Overriding this method provides the oppurtunity for one to have more control over how mapping targets are invoked.
+    def dispatch(match)
+      target = match.mapping[:target]
+      response.merge! begin
+        if Proc === target
+          instance_exec(&target)
+        else
+          target.call(env.merge(
+            'SCRIPT_NAME' => request.matched_path.chomp('/'),
+            'PATH_INFO' => request.unmatched_path[match.path.chomp('/').length..-1]
+          ))
+        end
+      end
+    end
+    
     # Finds mappings that match the unmatched portion of the request path, returning an array of `Match` objects, or an
     # empty array if no matches were found.
     #
     # The `:eligable` attribute of the `Match` object indicates whether the conditions for that mapping passed.
-    # The result is cached for the life time of the controller instance, for the sake of effecient-recalling.
+    # The result is cached for the life time of the controller instance, for the sake of effecient recalling.
     def matches
       return @_matches if @_matches
       to_match = request.unmatched_path

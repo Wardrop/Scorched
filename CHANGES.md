@@ -7,6 +7,8 @@ _Note that Scorched is yet to reach a v1.0 release. This means breaking changes 
 * Named captures have changed again. The values are now passed as arguments to route proc's in favor of using the new `captures` convenience method for accessing named arguments as a hash.
 * The `:redirect` option for `:strip_trailing_slashes` no longer cause a redirection loop when the request path is set to two or more forward slashes, e.g. '//'
 * Changed default value of `render_defaults[:tilt]` to `{default_encoding: 'UTF-8'}`. This defaults _Tilt_ to using UTF-8 for loading template files, which is desirable 99% of the time.
+* The `action` method has been split out into two new methods, `process` and `dispatch`. This provides the oppurtunity to override the dispatch logic where more control is needed over how mapping targets are invoked.
+* `:failed_condition` condition now takes into account whether any mapping has actually handled the request. This allows for example, the correct status to be set when a mapping has been matched, but has `pass`ed the request.
 
 ### v0.20
 * _After_ filters are now still processed when a request is halted. This restores the original behaviour prior to version 0.8. This fixes an issue where halting the request after setting flash session data would cause the request to bomb-out.
