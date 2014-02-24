@@ -6,6 +6,7 @@ end
 class Base < App
   def self.inherited(klass)
     klass.get('/') { invoke_action :index }
+    klass.get('/new') { invoke_action :new }
     klass.post('/') { invoke_action :create }
     klass.get('/:id') { invoke_action :show }
     klass.get('/:id/edit') { invoke_action :edit }
