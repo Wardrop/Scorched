@@ -1,7 +1,10 @@
 Changelog
 =========
 
-_Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading Scorched version for your project, review this changelog carefully._
+_Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
+
+### v0.22
+* The `redirect` method now passes the given URL through `absolute`.
 
 ### v0.21
 * Named captures have changed again. The values are now passed as arguments to route proc's in favor of using the new `captures` convenience method for accessing named arguments as a hash.

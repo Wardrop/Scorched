@@ -34,4 +34,4 @@ If a target passes a request, the request is still considered _unmatched_ or _un
 
 Redirections
 ------------
-A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple `redirect` method which takes one required argument - the absolute or relative URL to redirect to - and an optional response status, which defaults to either 303 or 302 depending on the HTTP protocol version used for the request.
+A common requirement of many applications is to redirect requests to another URL based on some kind of condition. Scorched offers the very simple `redirect` method which takes one required argument - the absolute or relative URL to redirect to - and an optional response status, which defaults to either a 303 or 302 response status depending on the HTTP protocol version used for the request.

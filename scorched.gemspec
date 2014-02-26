@@ -10,7 +10,7 @@ Gem::Specification.new 'scorched', Scorched::VERSION do |s|
   s.license           = 'MIT'
   s.files             = Dir.glob(`git ls-files`.split("\n") - %w[.gitignore])
   s.test_files        = Dir.glob('spec/**/*_spec.rb')
-  s.rdoc_options      = %w[--line-numbers --inline-source --title Scorched --encoding=UTF-8]
+  s.has_rdoc          = 'yard'
 
   s.required_ruby_version = '>= 2.0.0'
 

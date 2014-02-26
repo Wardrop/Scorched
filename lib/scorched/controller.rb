@@ -370,8 +370,9 @@ module Scorched
       invert ? !retval : !!retval
     end
     
+    # Redirects to the specified path or URL. An optional HTTP status is also accepted.
     def redirect(url, status = (env['HTTP_VERSION'] == 'HTTP/1.1') ? 303 : 302)
-      response['Location'] = url
+      response['Location'] = absolute(url)
       halt(status)
     end
     
