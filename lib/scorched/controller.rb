@@ -525,8 +525,10 @@ module Scorched
       return_path[0] == '/' ? return_path : return_path.insert(0, '/')
     end
     
-    after config: {show_http_error_pages: true}, status: 400..599 do
-      if response.empty?
+    # We always want this filter to run at the end-point controller, hence we include the conditions within the body of
+    # the filter.
+    after do
+      if response.empty? && !check_for_failed_condition(config: {show_http_error_pages: true}, status: 400..599)
         response.body = <<-HTML
           <!DOCTYPE html>
           <html>

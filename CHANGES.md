@@ -5,6 +5,7 @@ _Note that Scorched is yet to reach a v1.0 release. This means breaking changes 
 
 ### v0.22
 * The `redirect` method now passes the given URL through `absolute`.
+* The error page filter now always runs at the end-point controller so `:show_http_error_pages` behaves as expected when overriden in sub-controllers.
 
 ### v0.21
 * Named captures have changed again. The values are now passed as arguments to route proc's in favor of using the new `captures` convenience method for accessing named arguments as a hash.

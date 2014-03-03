@@ -1,4 +1,4 @@
-require File.expand_path('../../lib/scorched.rb', __FILE__)
+require 'scorched'
 
 class App < Scorched::Controller
   get '/:name' do
