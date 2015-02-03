@@ -39,14 +39,7 @@ class Customer < Base
   end
 end
 
-class Order < Base
-  def index
-    'Me order'
-  end
-end
-
 App.controller '/customer', Customer
-App.controller '/order', Order
 App.controller '/', Root
 
 run App
