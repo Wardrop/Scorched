@@ -8,14 +8,14 @@ class Base < App
     klass.get('/') { invoke_action :index }
     klass.get('/new') { invoke_action :new }
     klass.post('/') { invoke_action :create }
-    klass.get('/:id') { invoke_action :show }
+    klass.get('/:id') { |id| invoke_action :show, id }
     klass.get('/:id/edit') { invoke_action :edit }
     klass.route('/:id', method: ['PATCH', 'PUT']) { invoke_action :update }
     klass.delete('/:id') { invoke_action :delete }
   end
-  
-  def invoke_action(action)
-    respond_to?(action) ? send(action) : pass
+
+  def invoke_action(action, *captures)
+    respond_to?(action) ? send(action, *captures) : pass
   end
 end
 
@@ -23,7 +23,7 @@ class Root < Base
   def index
     'Hello'
   end
-  
+
   def create
     'Creating it now'
   end
@@ -32,6 +32,10 @@ end
 class Customer < Base
   def index
     'Hello customer'
+  end
+
+  def show(id)
+    "Hello customer #{id}"
   end
 end
 
