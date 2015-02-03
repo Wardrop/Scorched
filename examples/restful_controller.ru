@@ -5,6 +5,7 @@ end
 
 module Scorched
   module RestActions
+
     def self.included(klass)
       klass.get('/') { invoke_action :index }
       klass.get('/new') { invoke_action :new }
@@ -18,21 +19,22 @@ module Scorched
     def invoke_action(action, *captures)
       respond_to?(action) ? send(action, *captures) : pass
     end
+
   end
 end
 
 class Root < App
+  include Scorched::RestActions
+
   def index
     'Hello'
   end
 
-  def create
-    'Creating it now'
-  end
 end
 
 class Customer < App
   include Scorched::RestActions
+
   def index
     'Hello customer'
   end
@@ -40,6 +42,7 @@ class Customer < App
   def show(id)
     "Hello customer #{id}"
   end
+
 end
 
 App.controller '/customer', Customer
