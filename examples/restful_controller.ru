@@ -11,9 +11,9 @@ module Scorched
       klass.get('/new') { invoke_action :new }
       klass.post('/') { invoke_action :create }
       klass.get('/:id') { |id| invoke_action :show, id }
-      klass.get('/:id/edit') { invoke_action :edit }
-      klass.route('/:id', method: ['PATCH', 'PUT']) { invoke_action :update }
-      klass.delete('/:id') { invoke_action :delete }
+      klass.get('/:id/edit') { |id| invoke_action :edit, id }
+      klass.route('/:id', method: ['PATCH', 'PUT']) { |id| invoke_action :update, id }
+      klass.delete('/:id') { |id| invoke_action :delete, id }
     end
 
     def invoke_action(action, *captures)
