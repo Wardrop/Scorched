@@ -13,7 +13,7 @@ module Scorched
       klass.get('/:id') { |id| invoke_action :show, id }
       klass.get('/:id/edit') { |id| invoke_action :edit, id }
       klass.route('/:id', method: ['PATCH', 'PUT']) { |id| invoke_action :update, id }
-      klass.delete('/:id') { |id| invoke_action :delete, id }
+      klass.delete('/:id') { |id| invoke_action :destroy, id }
     end
 
     def invoke_action(action, *captures)
