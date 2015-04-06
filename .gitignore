@@ -1,0 +1,4 @@
+.DS_Store
+passenger.*.*
+Gemfile.lock
+.bundle

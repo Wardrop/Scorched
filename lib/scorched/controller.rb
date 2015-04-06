@@ -2,7 +2,7 @@ require 'forwardable'
 
 module Scorched
   TemplateCache = Tilt::Cache.new
-  
+
   class Controller
     include Scorched::Options('config')
     include Scorched::Options('render_defaults')
@@ -13,7 +13,7 @@ module Scorched
     include Scorched::Collection('error_filters')
 
     attr_reader :request, :response
-    
+
     config << {
       :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
       :cache_templates => true,
@@ -22,9 +22,9 @@ module Scorched
       :show_http_error_pages => false, # If true, shows the default Scorched HTTP error page.
       :static_dir => false, # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
       :strip_trailing_slash => :redirect, # :redirect => Strips and redirects URL ending in forward slash, :ignore => internally ignores trailing slash, false => does nothing.
-      
+
     }
-    
+
     render_defaults << {
       :dir => 'views', # The directory containing all the view templates, relative to the current working directory.
       :layout => false, # The default layout template to use, relative to the view directory. Set to false for no default layout.
@@ -32,14 +32,14 @@ module Scorched
       :locals => {},
       :tilt => {default_encoding: 'UTF-8'}, # Options intended for Tilt. This gets around potential key name conflicts between Scorched and the renderer invoked by Tilt.
     }
-    
+
     if ENV['RACK_ENV'] == 'development'
       config[:show_exceptions] = true
       config[:static_dir] = 'public'
       config[:cache_templates] = false
       config[:show_http_error_pages] = true
     end
-    
+
     conditions << {
       charset: proc { |charsets|
         [*charsets].any? { |charset| env['rack-accept.request'].charset? charset }
@@ -58,16 +58,16 @@ module Scorched
           [*conditions].include? matches.first.failed_condition[0]
         end
       },
-      host: proc { |host| 
-        (Regexp === host) ? host =~ request.host : host == request.host 
+      host: proc { |host|
+        (Regexp === host) ? host =~ request.host : host == request.host
       },
       language: proc { |languages|
         [*languages].any? { |language| env['rack-accept.request'].language? language }
       },
       media_type: proc { |types|
-        [*types].any? { |type| env['rack-accept.request'].media_type? type }
+        [*types].any? { |type| env['scorched.accept'][:accept].acceptable? type }
       },
-      method: proc { |methods| 
+      method: proc { |methods|
         [*methods].include?(request.request_method)
       },
       handled: proc { |bool|
@@ -76,33 +76,34 @@ module Scorched
       proc: proc { |blocks|
         [*blocks].all? { |b| instance_exec(&b) }
       },
-      user_agent: proc { |user_agent| 
-        (Regexp === user_agent) ? user_agent =~ request.user_agent : user_agent == request.user_agent 
+      user_agent: proc { |user_agent|
+        (Regexp === user_agent) ? user_agent =~ request.user_agent : user_agent == request.user_agent
       },
-      status: proc { |statuses| 
+      status: proc { |statuses|
         [*statuses].include?(response.status)
       },
     }
-    
+
     middleware << proc { |controller|
       use Rack::Head
       use Rack::MethodOverride
       use Rack::Accept
+      use Scorched::Accept::Rack
       use Scorched::Static, controller.config[:static_dir] if controller.config[:static_dir]
       use Rack::Logger, controller.config[:logger] if controller.config[:logger]
       use Rack::ShowExceptions if controller.config[:show_exceptions]
     }
-    
+
     class << self
-      
+
       def mappings
         @mappings ||= []
       end
-      
+
       def filters
         @filters ||= {before: before_filters, after: after_filters, error: error_filters}
       end
-      
+
       def call(env)
         loaded = env['scorched.middleware'] ||= Set.new
         app = lambda do |env|
@@ -117,7 +118,7 @@ module Scorched
         builder.run(app)
         builder.call(env)
       end
-      
+
       # Generates and assigns mapping hash from the given arguments.
       #
       # Accepts the following keyword arguments:
@@ -136,10 +137,10 @@ module Scorched
         }
       end
       alias :<< :map
-      
+
       # Maps a new ad-hoc or predefined controller.
       #
-      # If a block is given, creates a new controller as a sub-class of _klass_ (_self_ by default), otherwise maps 
+      # If a block is given, creates a new controller as a sub-class of _klass_ (_self_ by default), otherwise maps
       # _klass_ itself. Returns the new anonymous controller class if a block is given, or _klass_ otherwise.
       def controller(pattern = '/', klass = self, **mapping, &block)
         if block_given?
@@ -151,7 +152,7 @@ module Scorched
         self << {pattern: pattern, target: controller}.merge(mapping)
         controller
       end
-      
+
       # Generates and returns a new route proc from the given block, and optionally maps said proc using the given args.
       # Helper methods are provided for each HTTP method which automatically define the appropriate _:method_
       # condition.
@@ -176,7 +177,7 @@ module Scorched
         end
         target
       end
-      
+
       ['get', 'post', 'put', 'delete', 'head', 'options', 'patch', 'link', 'unlink'].each do |method|
         methods = (method == 'get') ? ['GET', 'HEAD'] : [method.upcase]
         define_method(method) do |*args, **conds, &block|
@@ -184,36 +185,36 @@ module Scorched
           route(*args, **conds, &block)
         end
       end
-      
-      # Defines a filter of +type+. 
+
+      # Defines a filter of +type+.
       # +args+ is used internally by Scorched for passing additional arguments to some filters, such as the exception in
-      # the case of error filters. 
+      # the case of error filters.
       def filter(type, args: nil, force: nil, conditions: nil, **more_conditions, &block)
         more_conditions.merge!(conditions || {})
         filters[type.to_sym] << {args: args, force: force, conditions: more_conditions, proc: block}
       end
-      
+
       # Syntactic sugar for defining a before filter.
       # If +force+ is true, the filter is run even if another filter halts the request.
       def before(force: false, **conditions, &block)
         filter(:before, force: force, conditions: conditions, &block)
       end
-      
+
       # Syntactic sugar for defining an after filter.
       # If +force+ is true, the filter is run even if another filter halts the request.
       def after(force: false, **conditions, &block)
         filter(:after, force: force, conditions: conditions, &block)
       end
-      
+
       # Syntactic sugar for defining an error filter.
       # Takes one or more optional exception classes for which this error filter should handle. Handles all exceptions
       # by default.
       def error(*classes, **conditions, &block)
         filter(:error, args: classes, conditions: conditions, &block)
       end
-      
+
     private
-    
+
       # Parses and compiles the given URL string pattern into a regex if not already, returning the resulting regexp
       # object. Accepts an optional _match_to_end_ argument which will ensure the generated pattern matches to the end
       # of the string.
@@ -237,15 +238,19 @@ module Scorched
         Regexp.new(compiled)
       end
     end
-    
+
     after(failed_condition: :host) { response.status = 404 }
     after(failed_condition: :method) { response.status = 405 }
     after(failed_condition: %i{charset encoding language media_type}) { response.status = 406 }
-    
-    def method_missing(method, *args, &block)
-      (self.class.respond_to? method) ? self.class.__send__(method, *args, &block) : super
+
+    def method_missing(method_name, *args, &block)
+      (self.class.respond_to? method_name) ? self.class.__send__(method_name, *args, &block) : super
     end
-    
+
+    def respond_to_missing?(method_name, include_private = false)
+      self.class.respond_to? method_name
+    end
+
     def initialize(env)
       define_singleton_method :env do
         env
@@ -254,13 +259,13 @@ module Scorched
       @request = Request.new(env)
       @response = Response.new
     end
-    
+
     # This is where the magic happens. Applies filters, matches mappings, applies error handlers, catches :halt and
     # :pass, etc.
     def process
       inner_error = nil
       rescue_block = proc do |e|
-        raise unless filters[:error].any? do |f|
+        (env['rack.exception'] = e && raise) unless filters[:error].any? do |f|
           if !f[:args] || f[:args].empty? || f[:args].any? { |type| e.is_a?(type) }
             instance_exec(e, &f[:proc]) unless check_for_failed_condition(f[:conditions])
           end
@@ -281,7 +286,7 @@ module Scorched
               [
                 m.mapping[:priority] || 0,
                 [*m.mapping[:conditions][:media_type]].map { |type|
-                  env['rack-accept.request'].media_type.qvalue(type)
+                  env['scorched.accept'][:accept].rank(type, true)
                 }.max || 0,
                 -idx
               ]
@@ -313,7 +318,7 @@ module Scorched
       end
       response.finish
     end
-    
+
     # Dispatches the request to the matched target.
     # Overriding this method provides the oppurtunity for one to have more control over how mapping targets are invoked.
     def dispatch(match)
@@ -329,7 +334,7 @@ module Scorched
         end
       end
     end
-    
+
     # Finds mappings that match the unmatched portion of the request path, returning an array of `Match` objects, or an
     # empty array if no matches were found.
     #
@@ -352,7 +357,7 @@ module Scorched
         end
       }.compact
     end
-    
+
     # Tests the given conditions, returning the name of the first failed condition, or nil otherwise.
     def check_for_failed_condition(conds)
       failed = (conds || []).find { |c, v| !check_condition?(c, v) }
@@ -361,7 +366,7 @@ module Scorched
       end
       failed
     end
-    
+
     # Test the given condition, returning true if the condition passes, or false otherwise.
     def check_condition?(c, v)
       c = c[0..-2].to_sym if invert = (c[-1] == '!')
@@ -369,13 +374,13 @@ module Scorched
       retval = instance_exec(v, &self.conditions[c])
       invert ? !retval : !!retval
     end
-    
+
     # Redirects to the specified path or URL. An optional HTTP status is also accepted.
     def redirect(url, status = (env['HTTP_VERSION'] == 'HTTP/1.1') ? 303 : 302)
       response['Location'] = absolute(url)
       halt(status)
     end
-    
+
     # call-seq:
     #     halt(status=nil, body=nil)
     #     halt(body)
@@ -388,20 +393,20 @@ module Scorched
       response.body = body if body
       throw :halt
     end
-    
+
     def pass
       throw :pass
     end
-    
+
     # Convenience method for accessing Rack session.
     def session
       env['rack.session']
     end
-    
+
     # Delegate a few common `request` methods for conveniance.
     extend Forwardable
     def_delegators :request, :captures
-    
+
     # Flash session storage helper.
     # Stores session data until the next time this method is called with the same arguments, at which point it's reset.
     # The typical use case is to provide feedback to the user on the previous action they performed.
@@ -417,11 +422,11 @@ module Scorched
       end
       session[key]
     end
-    
+
     after(force: true) do
       env['scorched.flash'].each { |k,v| session[k] = v } if session && env['scorched.flash']
     end
-    
+
     # Serves as a thin layer of convenience to Rack's built-in method: Request#cookies, Response#set_cookie, and
     # Response#delete_cookie.
     #
@@ -442,7 +447,7 @@ module Scorched
         end
       end
     end
-    
+
     # Renders the given string or file path using the Tilt templating library.
     # Each option defaults to the corresponding value defined in _render_defaults_ attribute. Unrecognised options are
     # passed through to Tilt, but a `:tilt` option is also provided for passing options directly to Tilt.
@@ -464,12 +469,12 @@ module Scorched
       tilt_options = options.merge(tilt || {})
       tilt_engine = (derived_engine = Tilt[string_or_file.to_s]) || Tilt[engine]
       raise Error, "Invalid or undefined template engine: #{engine.inspect}" unless tilt_engine
-      
+
       template = if Symbol === string_or_file
         file = string_or_file.to_s
         file = file << ".#{engine}" unless derived_engine
         file = File.expand_path(file, dir) if dir
-        
+
         template_cache.fetch(:file, tilt_engine, file, tilt_options) do
           tilt_engine.new(file, nil, tilt_options)
         end
@@ -478,7 +483,7 @@ module Scorched
           tilt_engine.new(nil, nil, tilt_options) { string_or_file }
         end
       end
-    
+
       # The following is responsible for preventing the rendering of layouts within views.
       begin
         original_no_default_layout = @_no_default_layout
@@ -487,7 +492,7 @@ module Scorched
       ensure
         @_no_default_layout = original_no_default_layout
       end
-      
+
       if layout
         render(layout, dir: dir, layout: false, engine: engine, locals: locals, tilt: tilt, **options) { output }
       else
@@ -512,7 +517,7 @@ module Scorched
         uri.to_s
       end
     end
-    
+
     # Takes an optional path, relative to the applications root URL, and returns an absolute path.
     # Example: absolute('/style.css') #=> /myapp/style.css
     def absolute(path = nil)
@@ -524,7 +529,7 @@ module Scorched
       end
       return_path[0] == '/' ? return_path : return_path.insert(0, '/')
     end
-    
+
     # We always want this filter to run at the end-point controller, hence we include the conditions within the body of
     # the filter.
     after do
@@ -557,9 +562,9 @@ module Scorched
       end
     end
 
-    
+
   private
-  
+
     def run_filters(type, forced_only = false)
       tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
       filters[type].reject{ |f| tracker[type].include?(f) || (forced_only && !f[:force]) }.each do |f|
@@ -575,7 +580,7 @@ module Scorched
         end
       end
     end
-    
+
     def log(type = nil, message = nil)
       config[:logger].progname ||= 'Scorched'
       if(type)

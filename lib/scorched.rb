@@ -3,6 +3,7 @@ ENV['RACK_ENV'] ||= 'development'
 # Gems
 require 'rack'
 require 'rack/accept'
+require 'scorched/accept'
 require 'tilt'
 
 # Stdlib

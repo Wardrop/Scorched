@@ -3,6 +3,11 @@ Changelog
 
 _Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
 
+### v0.23
+* Now using _scorched-accept_ for accept header parsing and logic, which fixes issues with the `:media_type` condition.
+* Exceptions caught by Scorched are now assigned to env['rack.exception'].
+* Implemented `respond_to_missing?` on Scorched::Controller.
+
 ### v0.22
 * The `redirect` method now passes the given URL through `absolute`.
 * The error page filter now always runs at the end-point controller so `:show_http_error_pages` behaves as expected when overriden in sub-controllers.
@@ -16,7 +21,7 @@ _Note that Scorched is yet to reach a v1.0 release. This means breaking changes 
 
 ### v0.20
 * _After_ filters are now still processed when a request is halted. This restores the original behaviour prior to version 0.8. This fixes an issue where halting the request after setting flash session data would cause the request to bomb-out.
-* As an extension of the change above, filters can now be marked as _forced_ using the new `force` option, which if true, means the filter will run even if the request is halted within another filter (including within another forced filter). This ensures a particular filter is run for every request. This required changing the public interface for the _filter_ method. The sugar methods _before_, _after_, and _error_ have remained backwards compatible. 
+* As an extension of the change above, filters can now be marked as _forced_ using the new `force` option, which if true, means the filter will run even if the request is halted within another filter (including within another forced filter). This ensures a particular filter is run for every request. This required changing the public interface for the _filter_ method. The sugar methods _before_, _after_, and _error_ have remained backwards compatible.
 * Named captures are now passed to route proc's as a single hash argument. The previous behaviour was an oversight.
 * Halting within an error filter is now swallowed if the error filter is invoked by an error raised in a before or after filter.
 * The `controller` helper can now be used to map predefined controllers simply by omitting the block, which is now optional. This a more convenient means of mapping controllers as compared to the more barebones `map` method.
@@ -59,7 +64,7 @@ _Note that Scorched is yet to reach a v1.0 release. This means breaking changes 
 * Bumped Tilt dependancy to v1.4 and removed work-around for Tilt encoding issue.
 
 ### v0.11
-* Route wildcards '*' and '**' (and their named equivalents) now match zero or more characters, instead of one or more. This means `/*` will now match both `/` and `/about` for example. 
+* Route wildcards '*' and '**' (and their named equivalents) now match zero or more characters, instead of one or more. This means `/*` will now match both `/` and `/about` for example.
 * Conditions can now be inverted by appending an exclamation mark to the condition, e.g. `method!: 'GET'` matches all HTTP methods, excluding GET.
 * While not strictly Scorched related, one planned feature for Scorched was to implement a simple form population mechanism. This has instead been implemented as a stand-alone project, [Formless](https://github.com/Wardrop/Formless), which can be used with any framework or application, including Scorched.
 
@@ -123,7 +128,7 @@ _Note that Scorched is yet to reach a v1.0 release. This means breaking changes 
 * Added specs for each configuration option.
 * Using Ruby 2.0 features where applicable. No excuse not to be able to deploy on 2.0 by the time Scorched is ready for production.
     * Keyword arguments instead of `*args`ombined with ` `Hash === args.last`  * Replaced instances of `__FILE__`ith ` `__dir__`Added expected Rack middleware, Rack::MethodOverride and Rack::Head.
-    
+
 ### v0.4
 * Make filters behave like middleware. Inheritable, but are only executed once.
 * Improved implementation of Options and Collection classes
@@ -143,4 +148,3 @@ _Note that Scorched is yet to reach a v1.0 release. This means breaking changes 
     * Added redirect helping for halting and redirecting request
 * Mechanism for handling exceptions in routes and before/after filters.
 * Added static resource serving. E.g. public folder.
-
