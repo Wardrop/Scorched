@@ -810,6 +810,7 @@ module Scorched
           response = rt.get('/test/')
           response.status.should == 307
           response['Location'].should == '/test'
+          rt.get('/test/?hello=world')['Location'].should == '/test?hello=world'
         end
 
         it "can be set to ignore trailing slash while pattern matching" do

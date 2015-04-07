@@ -275,7 +275,8 @@ module Scorched
       begin
         catch(:halt) do
           if config[:strip_trailing_slash] == :redirect && request.path =~ %r{[^/]/+$}
-            redirect(request.path.chomp('/'), 307)
+            query_string = request.query_string.empty? ? '' : '?' << request.query_string
+            redirect(request.path.chomp('/') + query_string, 307)
           end
           eligable_matches = matches.reject { |m| m.failed_condition }
           pass if config[:auto_pass] && eligable_matches.empty?

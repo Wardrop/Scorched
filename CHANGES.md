@@ -3,6 +3,9 @@ Changelog
 
 _Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
 
+### v0.24
+*  Query string is now preserved when stripping trailing slashes with `config[:strip_trailing_slash] = :redirect`, e.g. `/search/?query=cats` now becomes `/search?query=cats` instead of just `/search`.
+
 ### v0.23
 * Now using _scorched-accept_ for accept header parsing and logic, which fixes issues with the `:media_type` condition.
 * Exceptions caught by Scorched are now assigned to env['rack.exception'].
