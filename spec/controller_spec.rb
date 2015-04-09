@@ -1199,14 +1199,15 @@ module Scorched
         end
 
         it "can append an optional path" do
-          my_app.get('/absolute') { absolute('hello') }
+          my_app.get('/absolute') { absolute('/hello') }
           rt.get('http://scorchedrb.com/myapp/absolute?something=true').body.should == '/myapp/hello'
         end
 
-        it "returns the given URL if scheme detected" do
-          test_url = 'http://google.com/blah'
-          my_app.get('/') { absolute(test_url) }
-          rt.get('/myapp').body.should == test_url
+        it "returns the given path if it doesn't begin with a forward-slash" do
+          my_app.get('/url') { absolute('http://google.com/about') }
+          my_app.get('/relative') { absolute('./about') }
+          rt.get('/myapp/url').body.should == 'http://google.com/about'
+          rt.get('/myapp/relative').body.should == './about'
         end
 
         it "returns an absolute URL path for subcontroller defined with controller helper" do

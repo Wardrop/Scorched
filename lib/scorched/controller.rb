@@ -105,18 +105,18 @@ module Scorched
       end
 
       def call(env)
+        @instance_cache ||= {}
         loaded = env['scorched.middleware'] ||= Set.new
-        app = lambda do |env|
-          self.new(env).process
+        to_load = middleware.reject{ |v| loaded.include? v }
+        key = [loaded, to_load].map { |x| x.map &:object_id }
+        unless @instance_cache[key]
+          builder = Rack::Builder.new
+          to_load.each { |proc| builder.instance_exec(self, &proc) }
+          builder.run(lambda { |env| self.new(env).process })
+          @instance_cache[key] = builder.to_app
         end
-
-        builder = Rack::Builder.new
-        middleware.reject{ |v| loaded.include? v }.each do |proc|
-          builder.instance_exec(self, &proc)
-          loaded << proc
-        end
-        builder.run(app)
-        builder.call(env)
+        loaded.merge(to_load)
+        @instance_cache[key].call(env)
       end
 
       # Generates and assigns mapping hash from the given arguments.
@@ -520,15 +520,17 @@ module Scorched
     end
 
     # Takes an optional path, relative to the applications root URL, and returns an absolute path.
+    # If relative path given (i.e. anything not starting with `/`), returns it as-is.
     # Example: absolute('/style.css') #=> /myapp/style.css
     def absolute(path = nil)
-      return path if path && URI.parse(path).scheme
-      return_path = if path
+      return path if path && path[0] != '/'
+      abs = if path
         [env['scorched.root_path'], path].join('/').gsub(%r{/+}, '/')
       else
         env['scorched.root_path']
       end
-      return_path[0] == '/' ? return_path : return_path.insert(0, '/')
+      abs.insert(0, '/') unless abs[0] == '/'
+      abs
     end
 
     # We always want this filter to run at the end-point controller, hence we include the conditions within the body of

@@ -37,6 +37,7 @@ $ rackup hello_world.ru
 
 Scorched requires Ruby 2.0 or above. If you've got Ruby 2.0.0-p195 and newer, you're good. Otherwise, you need to ensure that your version of Ruby 2.0 includes [changeset 39919](http://bugs.ruby-lang.org/projects/ruby-trunk/repository/revisions/39919) in order to avoid suffering from [random segmentation faults](http://bugs.ruby-lang.org/issues/8100).
 
+
 The Errors of Our Past (and Present!)
 ----------------------
 One of the mistakes made by a lot of other Ruby frameworks is to not leverage the power of the class. Consequently, this makes for some awkwardness. Helpers for example, are a classic reinvention of what classes and modules are already made to solve. Scorched implements Controllers as classes, which in addition to having their own DSL, allow you to define and call whatever you need as standard instance methods. The decision to allow developers to implement helpers and other common functionality as standard instance methods not only makes Controllers somewhat more predictable and familiar, but also allows for such helpers to be inheritable via plain old class inheritance.
@@ -63,33 +64,33 @@ First Impressions
 
 ```ruby
 class MyApp < Scorched::Controller
-  
+
   # From the most simple route possible...
   get '/' do
     "Hello World"
   end
-  
+
   # To something that gets the muscle's flexing
   route '/articles/:title/::opts', 2, method: ['GET', 'POST'], content_type: :json do
     # Do what you want in here. Note, the second argument is the optional route priority.
   end
-  
+
   # Anonymous controllers allow for convenient route grouping to which filters and conditions can be applied
   controller conditions: {media_type: 'application/json'} do
     get '/articles/*' do |page|
       {title: 'Scorched Rocks', body: '...', created_at: '27/08/2012', created_by: 'Bob'}
     end
-    
+
     after do
       response.body = response.body.to_json
     end
   end
-  
+
   # The things you get for free by using Classes for Controllers (...that's directed at you Padrino)
   def my_little_helper
     # Do some crazy awesome stuff that no route can resist using.
   end
-  
+
   # You can always avoid the routing helpers and add mappings manually. Anything that responds to #call is a valid
   # target, with the only minor exception being that proc's are instance_exec'd, not call'd.
   self << {pattern: '/admin', priority: 10, target: My3rdPartyAdminApp}
@@ -106,6 +107,9 @@ This API shouldn't look too foreign to anyone familiar with frameworks like Sina
 * Route priorities - Routes (referred to as mappings internally) can be assigned priorities. A priority can be any arbitrary number by which the routes are ordered. The higher the number, the higher the priority.
 * Conditions - Conditions are merely procs defined on the controller which are inherited (and can be overriden) by child controllers. When a request comes in, mappings that match the requested URL, first have their conditions evaluated in the context of the controller instance, before control is handed off to the target associated with that mapping. It's a very simple implementation that comes with a lot of flexibility.
 
+Comparisons with other frameworks
+---------------------------------
+Refer to the [comparisons](https://github.com/Wardrop/Scorched/tree/master/comparisons) directory in the repo to compare a simple example app written in similar frameworks to Scorched.
 
 Links
 -----

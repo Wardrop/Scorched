@@ -6,24 +6,38 @@ module Scorched
     delegate 'to_hash', *Hash.instance_methods(false).reject { |m|
       [:[]=, :clear, :delete, :delete_if, :merge!, :replace, :shift, :store].include? m
     }
-    
+
     alias_method :<<, :_merge!
-    
+
     # sets parent Options object and returns self
     def parent!(parent)
       @parent = parent
+      @cache = {}
       self
     end
-    
+
     def to_hash(inherit = true)
-      (inherit && Hash === @parent) ? @parent.to_hash.merge(self) : {}.merge(self)
+      @cache ||= {}
+      unless @cache[:self] == self._to_h
+        @cache[:self] = self._to_h
+        @cache[:merged] = nil
+      end
+      if inherit && Hash === @parent
+        unless @cache[:parent] == @parent.to_hash
+          @cache[:parent] = @parent.to_hash
+          @cache[:merged] = nil
+        end
+        @cache[:merged] ||= @cache[:parent].merge(@cache[:self])
+      else
+        @cache[:self]
+      end
     end
-    
+
     def inspect
       "#<#{self.class}: local#{_inspect}, merged#{to_hash.inspect}>"
     end
   end
-  
+
   class << self
     def Options(accessor_name)
       m = Module.new
@@ -51,4 +65,3 @@ module Scorched
     end
   end
 end
-
