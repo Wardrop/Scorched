@@ -18,7 +18,7 @@ module Scorched
 
     def to_hash(inherit = true)
       @cache ||= {}
-      unless @cache[:self] == self._to_h
+      unless @cache[:self] == self
         @cache[:self] = self._to_h
         @cache[:merged] = nil
       end

@@ -11,14 +11,14 @@ module Scorched
       self.header.merge!(response[1])
       self
     end
-    
+
     # Automatically wraps the assigned value in an array if it doesn't respond to ``each``.
     # Also filters out non-true values and empty strings.
     def body=(value)
       value = [] if !value || value == ''
       super(value.respond_to?(:each) ? value : [value.to_s])
     end
-    
+
     # Override finish to avoid using BodyProxy
     def finish(*args, &block)
       self['Content-Type'] ||= 'text/html;charset=utf-8'
@@ -32,7 +32,7 @@ module Scorched
         [status.to_i, header, body]
       end
     end
-    
+
     alias :to_a :finish
     alias :to_ary :finish
   end
