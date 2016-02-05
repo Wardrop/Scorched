@@ -109,7 +109,7 @@ This API shouldn't look too foreign to anyone familiar with frameworks like Sina
 
 Comparisons with other frameworks
 ---------------------------------
-Refer to the [comparisons](https://github.com/Wardrop/Scorched/tree/master/comparisons) directory in the repo to compare a simple example app written in frameworks similar to Scorched.
+Refer to the [comparisons](https://github.com/Wardrop/Scorched/tree/master/comparison) directory in the repo to compare a simple example app written in frameworks similar to Scorched.
 
 Links
 -----
