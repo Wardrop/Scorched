@@ -1,4 +1,4 @@
-[Simple, Powerful, Scorched](http://scorchedrb.com)
+[Simple, Powerful, Scorched](https://scorchedrb.com)
 ==========================
 
 Scorched is a generic, unopinionated, DRY, light-weight web framework for Ruby. It provides a generic yet powerful set of constructs for processing HTTP requests, with which websites and applications of almost any scale can be built.
@@ -113,8 +113,8 @@ Refer to the [comparisons](https://github.com/Wardrop/Scorched/tree/master/compa
 
 Links
 -----
-* [Website](http://scorchedrb.com)
-* [Online API Reference](http://rubydoc.info/gems/scorched)
-* [GitHub Project](http://github.com/wardrop/Scorched)
-* [Issue Tracker](http://github.com/wardrop/Scorched/issues)
+* [Website](https://scorchedrb.com)
+* [Online API Reference](https://rubydoc.info/gems/scorched)
+* [GitHub Project](https://github.com/wardrop/Scorched)
+* [Issue Tracker](https://github.com/wardrop/Scorched/issues)
 * [Discussion/Mailing List](https://groups.google.com/d/forum/scorched)

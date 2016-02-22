@@ -176,6 +176,22 @@ module Scorched
         req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
 
+      it "can use symbol matchers" do
+        app << {pattern: '/:numeric', target: proc { |env| [200, {}, ['ok']] }}
+        rt.get('/45').status.should == 200
+        rt.get('/dog45').status.should == 404
+        req = nil
+        app << {pattern: '/:alpha_numeric', target: proc { |env| req = request; [200, {}, ['ok']] }}
+        rt.get('/dog45').status.should == 200
+        req.captures[:alpha_numeric].should == 'dog45'
+        rt.get('/_dog45').status.should == 404
+      end
+
+      it "can coerce symbol-matched values" do
+        app << {pattern: '/:numeric', target: proc { |env| [200, {}, [request.captures[:numeric].class.name]] }}
+        rt.get('/45').body.should == 'Fixnum'
+      end
+
       it "matches routes based on priority, otherwise giving precedence to those defined first" do
         order = []
         app << {pattern: '/', priority: -1, target: proc { |env| order << 'four'; [200, {}, ['ok']] }}

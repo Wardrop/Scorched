@@ -7,6 +7,7 @@ module Scorched
     include Scorched::Options('config')
     include Scorched::Options('render_defaults')
     include Scorched::Options('conditions')
+    include Scorched::Options('symbol_matchers')
     include Scorched::Collection('middleware')
     include Scorched::Collection('before_filters')
     include Scorched::Collection('after_filters', true)
@@ -84,13 +85,18 @@ module Scorched
       },
     }
 
+    symbol_matchers << {
+      numeric: [/(\d+)/, proc { |x| x.to_i }],
+      alpha_numeric: /([\da-z]+)/i
+    }
+
     middleware << proc { |controller|
       use Rack::Head
       use Rack::MethodOverride
       use Rack::Accept
       use Scorched::Accept::Rack
       use Scorched::Static, controller.config[:static_dir] if controller.config[:static_dir]
-      use Rack::Logger, controller.config[:logger] if controller.config[:logger]
+      use Rack::CommonLogger, controller.config[:logger] if controller.config[:logger]
       use Rack::ShowExceptions if controller.config[:show_exceptions]
     }
 
@@ -228,7 +234,13 @@ module Scorched
             if %w{* **}.include? match
               match == '*' ? "([^/]#{op})" : "(.#{op})"
             elsif match
-              match[0..1] == '::' ? "(?<#{match[2..-1]}>.#{op})" : "(?<#{match[1..-1]}>[^/]#{op})"
+              if match[0..1] == '::'
+                "(?<#{match[2..-1]}>.#{op})"
+              else
+                name = match[1..-1].to_sym
+                regexp = symbol_matchers[name] ? [*symbol_matchers[name]][0] : "[^/]"
+                "(?<#{name}>#{regexp}#{op})"
+              end
             else
               ''
             end
@@ -351,7 +363,10 @@ module Scorched
             if match_data.names.empty?
               captures = match_data.captures
             else
-              captures = Hash[match_data.names.map{|v| v.to_sym}.zip match_data.captures]
+              captures = Hash[match_data.names.map {|v| v.to_sym}.zip(match_data.captures)]
+              captures.each do |k,v|
+                captures[k] = symbol_matchers[k][1].call(v) if Array === symbol_matchers[k]
+              end
             end
             Match.new(mapping, captures, match_data.to_s, check_for_failed_condition(mapping[:conditions]))
           end

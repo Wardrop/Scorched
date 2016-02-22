@@ -41,8 +41,7 @@ In the latter of the two examples above, a `:method` condition defines what meth
 
 Pattern Matching
 ----------------
-All patterns attempt to match the remaining unmatched portion of the _request path_; the _request path_ being Rack's
-`path_info` request variable. The unmatched path will always begin with a forward slash if the previously matched portion of the path ended immediately before, or included as the last character, a forward slash. As an example, if the request was to "/article/21", then both "/article/" => "/21" and "/article" => "/21" would match.
+All patterns attempt to match the remaining unmatched portion of the _request path_; the _request path_ being Rack's `path_info` request variable. The unmatched path will always begin with a forward slash if the previously matched portion of the path ended immediately before, or included as the last character, a forward slash. As an example, if the request was to "/article/21", then both "/article/" => "/21" and "/article" => "/21" would match.
 
 The `path_info` used to match against is unescaped, meaning percent-codes are resolved, e.g. `%20` resolves to a space. The two exceptions are the escaped forward-slash and percent sign, which remain escaped as `%2F` and `%25` respectively.
 
@@ -65,7 +64,30 @@ String patterns are compiled into Regexp patterns corresponding to the following
 * `$` - If placed at the end of a pattern, the pattern only matches if it matches the entire path. For patterns defined using the route helpers, e.g. `Controller.route`, `Controller.get`, this is implied.
 
 ###Regex Patterns
-Regex patterns offer more power and flexibility than string patterns (naturally). The rules for Regex patterns are identical to String patterns, e.g. they must match from the beginning of the path, etc. 
+Regex patterns offer more power and flexibility than string patterns (naturally). The rules for Regex patterns are identical to String patterns, e.g. they must match from the beginning of the path, etc.
+
+###Symbol Matchers
+Symbol matchers were added in v0.25 as a way to conveniently name and re-use regular expressions for matching. Additionally, symbol matchers allow one to define a Proc to pre-process the matched string. This can be used to coerce a value into a particular type (such as an integer), or to manipulate the string in some other way.
+
+Two symbol matchers are included. `:numeric` and `:alpha_numeric`. These are more for example sake than anything else, as it's intended users will implement symbol matchers specific to their application. For example:
+
+```ruby
+symbol_matchers[:article_id] = /[a-z0-9\-]+-[0-9]{1,6}/
+```
+
+The above symbol matcher would match an article id in a typical blog friendly-URL, e.g. hello-world-453. We can further improve this symbol matcher by using a Proc to remove everything but the numeric id at the end, converting it to an integer at the same time.
+
+```ruby
+symbol_matchers[:article_id] =[/[a-z0-9\-]+-([0-9]{1,6})/, proc { |v| v.split('-').last.to_i }]
+```
+
+One limitation to be aware of is that like named captures, if you use the same symbol matcher more than once in a single pattern, you only be able to access the first capture.
+
+```ruby
+get '/:article_id/:article_id' do
+  captures[:article_id] #=> Will always equal the value of whatever first :article_id captured.
+end
+```
 
 Captures
 --------
