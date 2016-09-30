@@ -3,6 +3,8 @@ Changelog
 
 _Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
 
+### v0.26
+* Fixed issue with `failed_condition` condition resulting in `NoMethodError: undefined method '[]' for nil:NilClass`
 ### v0.25
 * Added symbol matchers, which are basically just named regex. Only two symbol matchers included by default, `:numeric` and `:alpha_numeric`. It's intended that users add their own as per their applications requirements. E.g. `symbol_matchers[:article_id] = /[a-f][0-9]{4}/`. A symbol matcher can optionally take a two-element array, where the first element is the regex, and the second is a proc for the sake of coercing the matched value into the desired form, such as an integer.
 * Changed Rack::Logger to Rack::CommonLogger.

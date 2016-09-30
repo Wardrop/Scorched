@@ -56,7 +56,7 @@ module Scorched
       },
       failed_condition: proc { |conditions|
         if !matches.empty? && matches.any? { |m| m.failed_condition } && !@_handled
-          [*conditions].include? matches.first.failed_condition[0]
+          matches.first.failed_condition && [*conditions].include?(matches.first.failed_condition[0])
         end
       },
       host: proc { |host|
