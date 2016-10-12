@@ -788,6 +788,13 @@ module Scorched
         rt.get('/nopass').status.should == 200
         handled.should be_truthy
       end
+
+      it "is still considered a match if an exception is raised" do
+        app.post('/') {  }
+        app.get('/') { raise "Test error"}
+        app.error { true } # Returns true to supress the exception
+        rt.get('/').status.should == 200 # Would return a 405 or something other than a 200 prior to v0.27.
+      end
     end
 
     describe "status codes" do

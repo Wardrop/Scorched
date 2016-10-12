@@ -3,6 +3,8 @@ Changelog
 
 _Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
 
+### v0.27
+* Fixed logic surrounding when a requested is considered "handled" (i.e. matched and dispatched) and exceptions that are raised after dispatch. In simpler terms, the `failed_condition` condition now has better logic in the event of an exception.
 ### v0.26
 * Fixed issue with `failed_condition` condition resulting in `NoMethodError: undefined method '[]' for nil:NilClass`
 ### v0.25

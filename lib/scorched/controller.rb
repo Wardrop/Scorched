@@ -306,8 +306,13 @@ module Scorched
             }.reverse.each { |match,idx|
               request.breadcrumb << match
               catch(:pass) {
-                catch(:halt) do
-                  dispatch(match)
+                begin
+                  catch(:halt) do
+                    dispatch(match)
+                  end
+                rescue
+                  @_handled = true
+                  raise
                 end
                 @_handled = true
               }
