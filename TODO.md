@@ -17,4 +17,3 @@ Refactor Considerations
 If I undergo a significant refactor of Scorched, here's a list of things I'd like to improve:
 
 * Create a basic plugin system for optional features which may incur a performance and/or complexity overhead, e.g. Symbol matchers, content for. This will also negate the need for any kind of `contrib` library.
-* Make route dispatching more modular, perhaps by simply breaking it out into more individual methods, making it more practical to override default behaviour.

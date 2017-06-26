@@ -189,7 +189,7 @@ module Scorched
 
       it "can coerce symbol-matched values" do
         app << {pattern: '/:numeric', target: proc { |env| [200, {}, [request.captures[:numeric].class.name]] }}
-        rt.get('/45').body.should == 'Fixnum'
+        rt.get('/45').body.should == 'Integer'
       end
 
       it "matches routes based on priority, otherwise giving precedence to those defined first" do
@@ -681,15 +681,25 @@ module Scorched
         rt.get('/').status.should == 600
       end
 
+      it "prevents matches from being invoked if a before filter has halted" do
+        app.before { halt}
+        app.get('/') { "success" }
+        rt.get('/').body.should_not == 'success'
+      end
+
       describe "within filters" do
-        it "short circuits filters if halted within filter" do
-          app.before { halt }
+        it "only short circuits other filters of same type if halted within filter" do
           app.after { response.status = 600 }
-          rt.get('/').status.should_not == 600
+          app.after { halt }
+          app.after { response.status = 601 }
+          rt.get('/').status.should == 600
+
+          app.before { halt }
+          rt.get('/').status.should == 600
         end
 
         it "forced filters are always run" do
-          app.before { halt }
+          app.after { halt }
           app.after(force: true) { response.status = 600 }
           app.after { response.status = 700 } # Shouldn't run because it's not forced
           app.get('/') { 'hello' }
@@ -720,7 +730,7 @@ module Scorched
       end
 
       it "allows the HTTP status to be overridden" do
-        app.get('/') { redirect '/somewhere', 308 }
+        app.get('/') { redirect '/somewhere', status: 308 }
         rt.get('/').status.should == 308
       end
 
@@ -736,9 +746,11 @@ module Scorched
 
       it "works in filters" do
         app.error { redirect '/somewhere' }
-        app.get('/') { raise "Some error" }
-        rt.get('/').location.should == '/somewhere'
+        app.get('/error') { raise "Some error" }
+        rt.get('/error').location.should == '/somewhere'
+
         app.before { redirect '/somewhere_else' }
+        app.get('/') { redirect '/meow' }
         rt.get('/').location.should == '/somewhere_else'
       end
     end
@@ -776,17 +788,6 @@ module Scorched
           app.get('/') { }
           rt.get('/')
         }.to raise_error(ArgumentError)
-      end
-
-      it "is not considered a match if a mapping passes the request" do
-        app.get('/*') { pass }
-        app.get('/nopass') {  }
-        handled = nil
-        app.after { handled = @_handled }
-        rt.get('/').status.should == 404 # 404 if matched, but passed
-        handled.should be_falsey
-        rt.get('/nopass').status.should == 200
-        handled.should be_truthy
       end
 
       it "is still considered a match if an exception is raised" do

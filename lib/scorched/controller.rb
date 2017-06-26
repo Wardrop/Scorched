@@ -55,7 +55,7 @@ module Scorched
         [*encodings].any? { |encoding| env['rack-accept.request'].encoding? encoding }
       },
       failed_condition: proc { |conditions|
-        if !matches.empty? && matches.any? { |m| m.failed_condition } && !@_handled
+        if !matches.empty? && matches.any? { |m| m.failed_condition } && !@_dispatched
           matches.first.failed_condition && [*conditions].include?(matches.first.failed_condition[0])
         end
       },
@@ -70,9 +70,6 @@ module Scorched
       },
       method: proc { |methods|
         [*methods].include?(request.request_method)
-      },
-      handled: proc { |bool|
-        @_handled == bool
       },
       proc: proc { |blocks|
         [*blocks].all? { |b| instance_exec(&b) }
@@ -118,7 +115,7 @@ module Scorched
         unless @instance_cache[key]
           builder = Rack::Builder.new
           to_load.each { |proc| builder.instance_exec(self, &proc) }
-          builder.run(lambda { |env| self.new(env).process })
+          builder.run(lambda { |env| self.new(env).respond })
           @instance_cache[key] = builder.to_app
         end
         loaded.merge(to_load)
@@ -274,7 +271,8 @@ module Scorched
 
     # This is where the magic happens. Applies filters, matches mappings, applies error handlers, catches :halt and
     # :pass, etc.
-    def process
+    # Returns a rack-compatible tuple
+    def respond
       inner_error = nil
       rescue_block = proc do |e|
         (env['rack.exception'] = e && raise) unless filters[:error].any? do |f|
@@ -285,61 +283,47 @@ module Scorched
       end
 
       begin
-        catch(:halt) do
-          if config[:strip_trailing_slash] == :redirect && request.path =~ %r{[^/]/+$}
-            query_string = request.query_string.empty? ? '' : '?' << request.query_string
-            redirect(request.path.chomp('/') + query_string, 307)
-          end
-          eligable_matches = matches.reject { |m| m.failed_condition }
-          pass if config[:auto_pass] && eligable_matches.empty?
-          run_filters(:before)
-          begin
-            # Re-order matches based on media_type, ensuring priority and definition order are respected appropriately.
-            eligable_matches.each_with_index.sort_by { |m,idx|
-              [
-                m.mapping[:priority] || 0,
-                [*m.mapping[:conditions][:media_type]].map { |type|
-                  env['scorched.accept'][:accept].rank(type, true)
-                }.max || 0,
-                -idx
-              ]
-            }.reverse.each { |match,idx|
-              request.breadcrumb << match
-              catch(:pass) {
-                begin
-                  catch(:halt) do
-                    dispatch(match)
-                  end
-                rescue
-                  @_handled = true
-                  raise
-                end
-                @_handled = true
-              }
-              break if @_handled
-              request.breadcrumb.pop
-            }
-            unless @_handled
-              response.status = (!matches.empty? && eligable_matches.empty?) ? 403 : 404
-            end
-          rescue => inner_error
-            rescue_block.call(inner_error)
-          end
-          run_filters(:after)
-          true
-        end || begin
-          run_filters(:before, true)
-          run_filters(:after, true)
+        if config[:strip_trailing_slash] == :redirect && request.path =~ %r{[^/]/+$}
+          query_string = request.query_string.empty? ? '' : '?' << request.query_string
+          redirect(request.path.chomp('/') + query_string, status: 307, halt: false)
+          return response.finish
         end
+        pass if config[:auto_pass] && eligable_matches.empty?
+
+        if run_filters(:before)
+          catch(:halt) {
+            begin
+              try_matches
+            rescue => inner_error
+              rescue_block.call(inner_error)
+            end
+          }
+        end
+        run_filters(:after)
       rescue => outer_error
         outer_error == inner_error ? raise : catch(:halt) { rescue_block.call(outer_error) }
       end
       response.finish
     end
 
+    # Tries to dispatch to each eligable match. If the first match _passes_, tries the second match and so on.
+    # If there are no eligable matches, or all eligable matches pass, an appropriate 4xx response status is set.
+    def try_matches
+      eligable_matches.each do |match,idx|
+        request.breadcrumb << match
+        catch(:pass) {
+          dispatch(match)
+          return true
+        }
+        request.breadcrumb.pop # Current match passed, so pop the breadcrumb before the next iteration.
+      end
+      response.status = (!matches.empty? && eligable_matches.empty?) ? 403 : 404
+    end
+
     # Dispatches the request to the matched target.
-    # Overriding this method provides the oppurtunity for one to have more control over how mapping targets are invoked.
+    # Overriding this method provides the opportunity for one to have more control over how mapping targets are invoked.
     def dispatch(match)
+      @_dispatched = true
       target = match.mapping[:target]
       response.merge! begin
         if Proc === target
@@ -359,24 +343,41 @@ module Scorched
     # The `:eligable` attribute of the `Match` object indicates whether the conditions for that mapping passed.
     # The result is cached for the life time of the controller instance, for the sake of effecient recalling.
     def matches
-      return @_matches if @_matches
-      to_match = request.unmatched_path
-      to_match = to_match.chomp('/') if config[:strip_trailing_slash] == :ignore && to_match =~ %r{./$}
-      @_matches = mappings.map { |mapping|
-        mapping[:pattern].match(to_match) do |match_data|
-          if match_data.pre_match == ''
-            if match_data.names.empty?
-              captures = match_data.captures
-            else
-              captures = Hash[match_data.names.map {|v| v.to_sym}.zip(match_data.captures)]
-              captures.each do |k,v|
-                captures[k] = symbol_matchers[k][1].call(v) if Array === symbol_matchers[k]
+      @_matches ||= begin
+        to_match = request.unmatched_path
+        to_match = to_match.chomp('/') if config[:strip_trailing_slash] == :ignore && to_match =~ %r{./$}
+        mappings.map { |mapping|
+          mapping[:pattern].match(to_match) do |match_data|
+            if match_data.pre_match == ''
+              if match_data.names.empty?
+                captures = match_data.captures
+              else
+                captures = Hash[match_data.names.map {|v| v.to_sym}.zip(match_data.captures)]
+                captures.each do |k,v|
+                  captures[k] = symbol_matchers[k][1].call(v) if Array === symbol_matchers[k]
+                end
               end
+              Match.new(mapping, captures, match_data.to_s, check_for_failed_condition(mapping[:conditions]))
             end
-            Match.new(mapping, captures, match_data.to_s, check_for_failed_condition(mapping[:conditions]))
           end
-        end
-      }.compact
+        }.compact
+      end
+    end
+
+    # Returns an ordered list of eligable matches.
+    # Orders matches based on media_type, ensuring priority and definition order are respected appropriately.
+    # Sorts by mapping priority first, media type appropriateness second, and definition order third.
+    def eligable_matches
+      @_eligable_matches ||= begin
+        matches.select { |m| m.failed_condition.nil? }.each_with_index.sort_by do |m,idx|
+          priority = m.mapping[:priority] || 0
+          media_type_rank = [*m.mapping[:conditions][:media_type]].map { |type|
+            env['scorched.accept'][:accept].rank(type, true)
+          }.max || 0
+          order = -idx
+          [priority, media_type_rank, order]
+        end.reverse
+      end
     end
 
     # Tests the given conditions, returning the name of the first failed condition, or nil otherwise.
@@ -397,9 +398,10 @@ module Scorched
     end
 
     # Redirects to the specified path or URL. An optional HTTP status is also accepted.
-    def redirect(url, status = (env['HTTP_VERSION'] == 'HTTP/1.1') ? 303 : 302)
+    def redirect(url, status: (env['HTTP_VERSION'] == 'HTTP/1.1') ? 303 : 302, halt: true)
       response['Location'] = absolute(url)
-      halt(status)
+      response.status = status
+      self.halt if halt
     end
 
     # call-seq:
@@ -588,20 +590,26 @@ module Scorched
 
   private
 
-    def run_filters(type, forced_only = false)
+    # Returns false if any of the filters halted the request. True otherwise.
+    def run_filters(type)
+      halted = false
       tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
-      filters[type].reject{ |f| tracker[type].include?(f) || (forced_only && !f[:force]) }.each do |f|
-        unless check_for_failed_condition(f[:conditions])
+      filters[type].reject { |f| tracker[type].include?(f) }.each do |f|
+        unless check_for_failed_condition(f[:conditions]) || (halted && !f[:force])
           tracker[type] << f
-          if forced_only
-            catch(:halt) do
-              instance_exec(&f[:proc]); true
-            end or log.warn "Ignored halt while running forced filters."
-          else
-            instance_exec(&f[:proc])
-          end
+          halted = true unless run_filter(f)
         end
       end
+      !halted
+    end
+
+    # Returns false if the filter halted. True otherwise.
+    def run_filter(f)
+      catch(:halt) do
+        instance_exec(&f[:proc])
+        return true
+      end
+      return false
     end
 
     def log(type = nil, message = nil)

@@ -1,13 +1,18 @@
 require File.expand_path('../../lib/scorched.rb', __FILE__)
 
 class App < Scorched::Controller
-  get '/:name' do
-    @message = greeting(captures[:name])
-    render :hello
+  get '/' do
+    'root'
   end
 
-  def greeting(name)
-    "Howdy #{name}"
+  controller '/' do
+    get '/login' do
+      'login'
+    end
+
+    get '/logout' do
+      'logout'
+    end
   end
 end
 

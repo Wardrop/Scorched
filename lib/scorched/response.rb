@@ -33,6 +33,8 @@ module Scorched
       end
     end
 
+    attr_accessor :halted
+
     alias :to_a :finish
     alias :to_ary :finish
   end
