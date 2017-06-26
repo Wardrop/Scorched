@@ -525,10 +525,10 @@ module Scorched
 
     # Takes an optional URL, relative to the applications root, and returns a fully qualified URL.
     # Example: url('/example?show=30') #=> https://localhost:9292/myapp/example?show=30
-    def url(path = nil)
+    def url(path = nil, scheme: nil)
       return path if path && URI.parse(path).scheme
       uri = URI::Generic.build(
-        scheme: env['rack.url_scheme'],
+        scheme: scheme || env['rack.url_scheme'],
         host: env['SERVER_NAME'],
         port: env['SERVER_PORT'].to_i,
         path: env['scorched.root_path'],
