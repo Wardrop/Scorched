@@ -34,7 +34,7 @@ module Scorched
       :tilt => {default_encoding: 'UTF-8'}, # Options intended for Tilt. This gets around potential key name conflicts between Scorched and the renderer invoked by Tilt.
     }
 
-    if ENV['RACK_ENV'] == 'development'
+    if ENV['APP_ENV'] == 'development'
       config[:show_exceptions] = true
       config[:static_dir] = 'public'
       config[:cache_templates] = false

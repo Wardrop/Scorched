@@ -1,4 +1,4 @@
-ENV['RACK_ENV'] = 'production'
+ENV['APP_ENV'] = 'production'
 
 require 'rack/test'
 require_relative '../lib/scorched.rb'
@@ -8,14 +8,14 @@ Scorched::Controller.config[:logger] = Logger.new(nil)
 module Scorched
   class SimpleCounter
     def initialize(app)
-      @app = app       
-    end                
+      @app = app
+    end
 
     def call(env)
       env['scorched.simple_counter'] ||= 0
       env['scorched.simple_counter'] += 1
-      @app.call(env)   
-    end                
+      @app.call(env)
+    end
   end
 end
 
@@ -26,11 +26,11 @@ module GlobalConfig
   let(:app) do
     Class.new(Scorched::Controller)
   end
-  
+
   let(:rt) do
     Rack::Test::Session.new(app)
   end
-  
+
   original_dir = __dir__
   before(:all) do
     Dir.chdir(__dir__)

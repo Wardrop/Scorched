@@ -3,6 +3,10 @@ Changelog
 
 _Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
 
+### v1.0.0.pre3
+* APP_ENV now preferred over RACK_ENV for setting the environment.
+### v1.0.0.pre2
+* Updated core dependencies.
 ### v1.0.0.pre
 * Refactored `process` method. Now named `respond`, and breaks out to other methods. The logic surrounding filters and halting has also been modified, as is now more intuitive in my opinion.
 * Removed `@_handled` instance variable, and the related `handled` condition.

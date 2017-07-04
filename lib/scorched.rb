@@ -1,4 +1,4 @@
-ENV['RACK_ENV'] ||= 'development'
+ENV['APP_ENV'] ||= ENV['RACK_ENV'] || 'development'
 
 # Gems
 require 'rack'
