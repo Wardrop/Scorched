@@ -51,6 +51,9 @@ module Scorched
       content_type: proc { |content_types|
         [*content_types].include? env['CONTENT_TYPE']
       },
+      dispatched: proc { |bool|
+        !!@_dispatched == bool
+      },
       encoding: proc { |encodings|
         [*encodings].any? { |encoding| env['rack-accept.request'].encoding? encoding }
       },
