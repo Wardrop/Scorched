@@ -18,7 +18,7 @@ module Scorched
     config << {
       :auto_pass => false, # Automatically _pass_ request back to outer controller if no route matches.
       :cache_templates => true,
-      :logger => Logger.new(STDOUT),
+      :logger => nil,
       :show_exceptions => false,
       :show_http_error_pages => false, # If true, shows the default Scorched HTTP error page.
       :static_dir => false, # The directory Scorched should serve static files from. Set to false if web server or anything else is serving static files.
@@ -35,6 +35,7 @@ module Scorched
     }
 
     if ENV['APP_ENV'] == 'development'
+      config[:logger] = Logger.new(STDOUT)
       config[:show_exceptions] = true
       config[:static_dir] = 'public'
       config[:cache_templates] = false
