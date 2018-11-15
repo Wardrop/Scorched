@@ -44,4 +44,7 @@ RSpec.configure do |c|
   c.alias_example_to :they
   # c.backtrace_clean_patterns = []
   c.include GlobalConfig
+  c.expect_with :rspec do |expectations|
+    expectations.syntax = [:should, :expect]
+  end
 end

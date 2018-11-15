@@ -1,8 +1,8 @@
 Changelog
 =========
 
-_Note that Scorched is yet to reach a v1.0 release. This means breaking changes may still be made. If upgrading the version of Scorched for your project, review this changelog carefully._
-
+### v1.0.0
+* Updated all dependencies. Ready for 1.0.0 release.
 ### v1.0.0.pre5
 * Log level now defaults to :warn for every environment except development, which defaults to :debug
 ### v1.0.0.pre4
