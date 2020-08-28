@@ -156,7 +156,7 @@ module Scorched
         else
           controller = klass
         end
-        self << {pattern: pattern, target: controller}.merge(mapping)
+        self.map **{pattern: pattern, target: controller}.merge(mapping)
         controller
       end
 
@@ -180,7 +180,7 @@ module Scorched
           response
         end
         [*pattern].compact.each do |pattern|
-          self << {pattern: compile(pattern, true), priority: priority, conditions: conds, target: target}
+          self.map pattern: compile(pattern, true), priority: priority, conditions: conds, target: target
         end
         target
       end
@@ -466,7 +466,7 @@ module Scorched
       if value.empty?
         request.cookies[name]
       else
-        value = Hash === value[0] ? value[0] : {value: value}
+        value = (Hash === value[0]) ? value[0] : {value: value[0]}
         if value[:value].nil?
           response.delete_cookie(name, value)
         else

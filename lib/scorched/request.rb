@@ -33,7 +33,7 @@ module Scorched
     # The unescaped URL, excluding the escaped forward-slash and percent. The resulting string will always be safe
     # to unescape again in situations where the forward-slash or percent are expected and valid characters. 
     def unescaped_path
-      path_info.split(/(%25|%2F)/i).each_slice(2).map { |v, m| URI.unescape(v) << (m || '') }.join('')
+      path_info.split(/(%25|%2F)/i).each_slice(2).map { |v, m| CGI.unescape(v) << (m || '') }.join('')
     end
     
   private

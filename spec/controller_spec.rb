@@ -24,13 +24,13 @@ module Scorched
       end
 
       it "handles a root rack call correctly" do
-        app << {pattern: '/$', target: generic_handler}
+        app.map pattern: '/$', target: generic_handler
         response = rt.get '/'
         response.status.should == 200
       end
 
       it "does not maintain state between requests" do
-        app << {pattern: '/state', target: proc { |env| [200, {}, [@state = 1 + @state.to_i]] }}
+        app.map pattern: '/state', target: proc { |env| [200, {}, [@state = 1 + @state.to_i]] }
         response = rt.get '/state'
         response.body.should == '1'
         response = rt.get '/state'
@@ -39,54 +39,54 @@ module Scorched
 
       it "raises exception when invalid mapping hash given" do
         expect {
-          app << {pattern: '/'}
+          app.map(pattern: '/')
         }.to raise_error(ArgumentError)
         expect {
-          app << {target: generic_handler}
+          app.map(target: generic_handler)
         }.to raise_error(ArgumentError)
       end
     end
 
     describe "URL matching" do
       it 'always matches from the beginning of the URL' do
-        app << {pattern: 'about', target: generic_handler}
+        app.map pattern: 'about', target: generic_handler
         response = rt.get '/about'
         response.status.should == 404
       end
 
       it "matches eagerly by default" do
         req = nil
-        app << {pattern: '/*', target: proc do |env|
+        app.map pattern: '/*', target: proc { |env|
           req = request; [200, {}, ['ok']]
-        end}
+        }
         response = rt.get '/about'
         req.captures.should == ['about']
       end
 
       it "can be forced to match end of URL" do
-        app << {pattern: '/about$', target: generic_handler}
+        app.map pattern: '/about$', target: generic_handler
         response = rt.get '/about/us'
         response.status.should == 404
-        app << {pattern: '/about', target: generic_handler}
+        app.map pattern: '/about', target: generic_handler
         response = rt.get '/about/us'
         response.status.should == 200
       end
 
       it "unescapes all characters except for the forward-slash and percent sign" do
-        app << {pattern: '/a (quite) big fish', target: generic_handler}
+        app.map pattern: '/a (quite) big fish', target: generic_handler
         rt.get('/a%20%28quite%29%20big%20fish').status.should == 200
-        app << {pattern: '/article/100%25 big%2Fsmall', target: generic_handler}
+        app.map pattern: '/article/100%25 big%2Fsmall', target: generic_handler
         rt.get('/article/100%25%20big%2Fsmall').status.should == 200
-        app << {pattern: '/*$', target: generic_handler}
+        app.map pattern: '/*$', target: generic_handler
         rt.get('/page%2Fabout').status.should == 200
         rt.get('/page/about').status.should == 404
       end
 
       it "unmatched path doesn't always begin with a forward slash" do
         gh = generic_handler
-        app << {pattern: '/ab', target: Class.new(Scorched::Controller) do
+        app.map pattern: '/ab', target: Class.new(Scorched::Controller) {
           map(pattern: 'out', target: gh)
-        end}
+        }
         resp = rt.get('/about')
         resp.status.should == 200
         resp.body.should == "ok"
@@ -94,119 +94,119 @@ module Scorched
 
       it "unmatched path begins with forward slash if last match was up to or included a forward slash" do
         gh = generic_handler
-        app << {pattern: '/about/', target: Class.new(Scorched::Controller) do
+        app.map pattern: '/about/', target: Class.new(Scorched::Controller) {
           map(pattern: '/us', target: gh)
-        end}
-        app << {pattern: '/contact', target: Class.new(Scorched::Controller) do
+        }
+        app.map pattern: '/contact', target: Class.new(Scorched::Controller) {
           map(pattern: '/us', target: gh)
-        end}
+        }
         rt.get('/about/us').body.should == "ok"
         rt.get('/contact/us').body.should == "ok"
       end
 
       it "can match anonymous wildcards" do
         req = nil
-        app << {pattern: '/anon/*/**', target: proc do |env|
+        app.map pattern: '/anon/*/**', target: proc { |env|
           req = request; [200, {}, ['ok']]
-        end}
+        }
         response = rt.get '/anon/jeff/has/crabs'
         req.captures.should == ['jeff', 'has/crabs']
       end
 
       it "can match named wildcards (ignoring anonymous captures)" do
         req = nil
-        app << {pattern: '/anon/:name/*/::infliction', target: proc do |env|
+        app.map pattern: '/anon/:name/*/::infliction', target: proc { |env|
           req = request; [200, {}, ['ok']]
-        end}
+        }
         response = rt.get '/anon/jeff/smith/has/crabs'
         req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
 
       example "wildcards match one or more characters" do
-        app << {pattern: '/*', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/*', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 404
         rt.get('/dog').status.should == 200
         app.mappings.clear
-        app << {pattern: '/**', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/**', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 404
         rt.get('/dog/cat').status.should == 200
         app.mappings.clear
-        app << {pattern: '/:page', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/:page', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 404
         rt.get('/dog').status.should == 200
         app.mappings.clear
-        app << {pattern: '/::page', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/::page', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 404
         rt.get('/dog/cat').status.should == 200
       end
 
       example "wildcards can optionally match zero or more characters" do
-        app << {pattern: '/*?', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/*?', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 200
         rt.get('/dog').status.should == 200
         app.mappings.clear
-        app << {pattern: '/**?', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/**?', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 200
         rt.get('/dog/cat').status.should == 200
         app.mappings.clear
-        app << {pattern: '/:page?', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/:page?', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 200
         rt.get('/dog').status.should == 200
         app.mappings.clear
-        app << {pattern: '/::page?', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/::page?', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/').status.should == 200
         rt.get('/dog/cat').status.should == 200
       end
 
       it "can match regex and preserve anonymous captures" do
         req = nil
-        app << {pattern: %r{/anon/([^/]+)/(.+)}, target: proc do |env|
+        app.map pattern: %r{/anon/([^/]+)/(.+)}, target: proc { |env|
           req = request; [200, {}, ['ok']]
-        end}
+        }
         response = rt.get '/anon/jeff/has/crabs'
         req.captures.should == ['jeff', 'has/crabs']
       end
 
       it "can match regex and preserve named captures (ignoring anonymous captures)" do
         req = nil
-        app << {pattern: %r{/anon/(?<name>[^/]+)/([^/]+)/(?<infliction>.+)}, target: proc do |env|
+        app.map pattern: %r{/anon/(?<name>[^/]+)/([^/]+)/(?<infliction>.+)}, target: proc { |env|
           req = request; [200, {}, ['ok']]
-        end}
+        }
         response = rt.get '/anon/jeff/smith/has/crabs'
         req.captures.should == {name: 'jeff', infliction: 'has/crabs'}
       end
 
       it "can use symbol matchers" do
-        app << {pattern: '/:numeric', target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/:numeric', target: proc { |env| [200, {}, ['ok']] }
         rt.get('/45').status.should == 200
         rt.get('/dog45').status.should == 404
         req = nil
-        app << {pattern: '/:alpha_numeric', target: proc { |env| req = request; [200, {}, ['ok']] }}
+        app.map pattern: '/:alpha_numeric', target: proc { |env| req = request; [200, {}, ['ok']] }
         rt.get('/dog45').status.should == 200
         req.captures[:alpha_numeric].should == 'dog45'
         rt.get('/_dog45').status.should == 404
       end
 
       it "can coerce symbol-matched values" do
-        app << {pattern: '/:numeric', target: proc { |env| [200, {}, [request.captures[:numeric].class.name]] }}
+        app.map pattern: '/:numeric', target: proc { |env| [200, {}, [request.captures[:numeric].class.name]] }
         rt.get('/45').body.should == 'Integer'
       end
 
       it "matches routes based on priority, otherwise giving precedence to those defined first" do
         order = []
-        app << {pattern: '/', priority: -1, target: proc { |env| order << 'four'; [200, {}, ['ok']] }}
-        app << {pattern: '/', target: proc { |env| order << 'two'; throw :pass }}
-        app << {pattern: '/', target: proc { |env| order << 'three'; throw :pass }}
-        app << {pattern: '/', priority: 2, target: proc { |env| order << 'one'; throw :pass }}
+        app.map pattern: '/', priority: -1, target: proc { |env| order << 'four'; [200, {}, ['ok']] }
+        app.map pattern: '/', target: proc { |env| order << 'two'; throw :pass }
+        app.map pattern: '/', target: proc { |env| order << 'three'; throw :pass }
+        app.map pattern: '/', priority: 2, target: proc { |env| order << 'one'; throw :pass }
         rt.get('/').body.should == 'ok'
         order.should == %w{one two three four}
       end
 
       it "finds the best match for the media type whilst respecting priority and definition order" do
-        app << {pattern: '/', target: proc { |env| [200, {}, ['anything']] }}
-        app << {pattern: '/', conditions: {media_type: 'application/json'}, target: proc { |env| [200, {}, ['application/json']] }}
-        app << {pattern: '/', conditions: {media_type: 'text/html'}, target: proc { |env| [200, {}, ['text/html']] }}
-        app << {pattern: '/', priority: 1, target: proc { |env| [200, {}, ['anything_high_priority']] }}
+        app.map pattern: '/', target: proc { |env| [200, {}, ['anything']] }
+        app.map pattern: '/', conditions: {media_type: 'application/json'}, target: proc { |env| [200, {}, ['application/json']] }
+        app.map pattern: '/', conditions: {media_type: 'text/html'}, target: proc { |env| [200, {}, ['text/html']] }
+        app.map pattern: '/', priority: 1, target: proc { |env| [200, {}, ['anything_high_priority']] }
         rt.get('/', {}, 'HTTP_ACCEPT' => 'application/json, */*;q=0.5').body.should == 'anything_high_priority'
         app.mappings.pop
         rt.get('/', {}, 'HTTP_ACCEPT' => 'application/json;q=0.5, text/html').body.should == 'text/html'
@@ -224,14 +224,14 @@ module Scorched
       end
 
       it "executes route only if all conditions return true" do
-        app << {pattern: '/$', conditions: {method: 'POST'}, target: generic_handler}
+        app.map pattern: '/$', conditions: {method: 'POST'}, target: generic_handler
         response = rt.get "/"
         response.status.should be_between(400, 499)
         response = rt.post "/"
         response.status.should == 200
 
         app.conditions[:has_name] = proc { |name| request.GET['name'] }
-        app << {pattern: '/about', conditions: {method: ['GET', 'POST'], has_name: 'Ronald'}, target: generic_handler}
+        app.map pattern: '/about', conditions: {method: ['GET', 'POST'], has_name: 'Ronald'}, target: generic_handler
         response = rt.get "/about"
         response.status.should be_between(400, 499)
         response = rt.get "/about", name: 'Ronald'
@@ -239,21 +239,21 @@ module Scorched
       end
 
       it "raises exception when condition doesn't exist or is invalid" do
-        app << {pattern: '/', conditions: {surprise_christmas_turkey: true}, target: generic_handler}
+        app.map pattern: '/', conditions: {surprise_christmas_turkey: true}, target: generic_handler
         expect {
           rt.get "/"
         }.to raise_error(Scorched::Error)
       end
 
       it "falls through to next route when conditions are not met" do
-        app << {pattern: '/', conditions: {method: 'POST'}, target: proc { |env| [200, {}, ['post']] }}
-        app << {pattern: '/', conditions: {method: 'GET'}, target: proc { |env| [200, {}, ['get']] }}
+        app.map pattern: '/', conditions: {method: 'POST'}, target: proc { |env| [200, {}, ['post']] }
+        app.map pattern: '/', conditions: {method: 'GET'}, target: proc { |env| [200, {}, ['get']] }
         rt.get("/").body.should == 'get'
         rt.post("/").body.should == 'post'
       end
 
       it "inverts the conditions if it's referenced with a trailing exclamation mark" do
-        app << {pattern: '/', conditions: {method!: 'GET'}, target: proc { |env| [200, {}, ['ok']] }}
+        app.map pattern: '/', conditions: {method!: 'GET'}, target: proc { |env| [200, {}, ['ok']] }
         rt.get("/").status.should == 405
         rt.post("/").status.should == 200
       end
@@ -272,7 +272,7 @@ module Scorched
         wrapped_block = app.route(&block)
         app.mappings.length.should == 0
         block.should_not == wrapped_block
-        app << {pattern: '/*', target: wrapped_block}
+        app.map pattern: '/*', target: wrapped_block
         rt.get('/turkey').body.should == 'turkey'
       end
 
@@ -319,9 +319,9 @@ module Scorched
 
     describe "sub-controllers" do
       it "should ignore the already matched portions of the path" do
-        app << {pattern: '/article', target: Class.new(Scorched::Controller) do
+        app.map pattern: '/article', target: Class.new(Scorched::Controller) {
           get('/*') { |title| title }
-        end}
+        }
         rt.get('/article/hello-world').body.should == 'hello-world'
       end
 
@@ -916,7 +916,7 @@ module Scorched
             get('/hello') { 'hello' }
             after { response.status = 600 }
           end
-          app << {pattern: '/', target: sub}
+          app.map pattern: '/', target: sub
           app.get('/') { 'ok' }
           rt.get('/').body.should == 'ok'
           rt.get('/').status.should == 200
@@ -1096,7 +1096,7 @@ module Scorched
           render(:'main.erb').should == "3 for me"
         end
         app.get('/full_path') do
-          render(:'views/main.erb', {layout: :'views/layout.erb', dir: nil}).should == "(3 for me)"
+          render(:'views/main.erb', **{layout: :'views/layout.erb', dir: nil}).should == "(3 for me)"
         end
         app.render_defaults[:dir] = 'views'
         rt.get('/')
