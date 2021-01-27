@@ -1,4 +1,4 @@
-require 'uri'
+require 'cgi'
 
 module Scorched
   class Request < Rack::Request
