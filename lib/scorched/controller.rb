@@ -377,7 +377,8 @@ module Scorched
           priority = m.mapping[:priority] || 0
           media_type_rank = [*m.mapping[:conditions][:media_type]].map { |type|
             env['scorched.accept'][:accept].rank(type, true)
-          }.max || 0
+          }.max
+          media_type_rank ||= env['scorched.accept'][:accept].rank('*/*', true) || 0 # Default to "*/*" if no media type condition specified.
           order = -idx
           [priority, media_type_rank, order]
         end.reverse

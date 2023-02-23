@@ -1,6 +1,8 @@
 Changelog
 =========
 
+### v1.0.3
+* Fixed issue where routes with a `media_type` condition were prioritised over those without for HTTP requests accepting "*/*"
 ### v1.0.2
 * Now requiring CGI instead of URI library as per v1.0.1 deprecation fixes.
 ### v1.0.1
