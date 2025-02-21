@@ -13,7 +13,8 @@ Gem::Specification.new 'scorched', Scorched::VERSION do |s|
 
   s.required_ruby_version = '>= 2.0.0'
 
-  s.add_dependency 'rack', '~> 2.0'
+  s.add_dependency 'rack', '~> 3.0'
+  s.add_dependency 'rack-session', '~> 2.1'
   s.add_dependency 'rack-accept', '~> 0.4' # Used for Accept-Charset, Accept-Encoding and Accept-Language headers.
   s.add_dependency 'scorched-accept', '~> 0.1' # Used for Accept header.
   s.add_dependency 'tilt', '~> 2.0'

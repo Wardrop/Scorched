@@ -5,10 +5,10 @@ module Scorched
     def merge!(response)
       return self if response == self
       if Rack::Response === response
-        response = [response.status, response.header, response]
+        response = [response.status, response.headers, response]
       end
       self.status, self.body = response[0], response[2]
-      self.header.merge!(response[1])
+      self.headers.merge!(response[1])
       self
     end
 
@@ -24,12 +24,12 @@ module Scorched
       self['Content-Type'] ||= 'text/html;charset=utf-8'
       @block = block if block
       if [204, 205, 304].include?(status.to_i)
-        header.delete "Content-Type"
-        header.delete "Content-Length"
+        delete_header "Content-Type"
+        delete_header "Content-Length"
         close
-        [status.to_i, header, []]
+        [status.to_i, headers, []]
       else
-        [status.to_i, header, body]
+        [status.to_i, headers, body]
       end
     end
 

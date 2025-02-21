@@ -12,7 +12,7 @@ module Scorched
   protected
 
     def file_server
-      @file_server ||= Rack::File.new(@dir)
+      @file_server ||= Rack::Files.new(@dir)
     end
   end
 end

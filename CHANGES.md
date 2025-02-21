@@ -1,6 +1,10 @@
 Changelog
 =========
 
+### v1.1.0.pre
+* Updated dependancies
+* Now compatible with (and requires) Rack 3.x
+* No longer escapes "+" into space characters
 ### v1.0.3
 * Fixed issue where routes with a `media_type` condition were prioritised over those without for HTTP requests accepting "*/*"
 ### v1.0.2

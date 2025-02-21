@@ -1,4 +1,5 @@
 require_relative './helper.rb'
+require 'securerandom'
 
 module Scorched
   describe Controller do
@@ -72,7 +73,7 @@ module Scorched
         response.status.should == 200
       end
 
-      it "unescapes all characters except for the forward-slash and percent sign" do
+      it "unescapes all characters except for the forward-slash, percent sign and plus" do
         app.map pattern: '/a (quite) big fish', target: generic_handler
         rt.get('/a%20%28quite%29%20big%20fish').status.should == 200
         app.map pattern: '/article/100%25 big%2Fsmall', target: generic_handler
@@ -80,6 +81,13 @@ module Scorched
         app.map pattern: '/*$', target: generic_handler
         rt.get('/page%2Fabout').status.should == 200
         rt.get('/page/about').status.should == 404
+
+        app.get('/foo/*') { |x| x }
+        app.map pattern: '/bar', target: Class.new(Scorched::Controller) {
+          get('/*') { |x| x }
+        }
+        rt.get('/foo/hello%2Bworld').body.should == 'hello+world'
+        rt.get('/bar/hello%2Bworld').body.should == 'hello+world'
       end
 
       it "unmatched path doesn't always begin with a forward slash" do
@@ -342,7 +350,7 @@ module Scorched
         inner_env['SCRIPT_NAME'].should == '/article'
         inner_env['PATH_INFO'].should == '/name'
       end
-
+      
       example "PATH_INFO and SCRIPT_NAME joined, should produce a full path" do
         app.controller '/article/' do
           get '/name' do
@@ -962,14 +970,14 @@ module Scorched
         app.get('/') { rack_session = session }
         rt.get('/')
         rack_session.should be_nil
-        app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
+        app.middleware << proc { use Rack::Session::Cookie, secret: SecureRandom.gen_random(64) }
         rt.get('/')
         rack_session.should be_a(Rack::Session::Abstract::SessionHash)
       end
 
       describe "flash" do
         before(:each) do
-          app.middleware << proc { use Rack::Session::Cookie, secret: 'test' }
+          app.middleware << proc { use Rack::Session::Cookie, secret: SecureRandom.gen_random(64) }
         end
 
         it "keeps session variables that live for one page load" do
