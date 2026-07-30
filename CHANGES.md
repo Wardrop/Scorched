@@ -1,6 +1,19 @@
 Changelog
 =========
 
+### v1.1.0
+* Added `around` filters to allow wrapping application logic around a request. `around` filters wrap around `before/after` filters. Ideal for `begin...ensure...end` where you need to ensure something happens before the request processing ends. For example:
+    ```
+    around do |cont|
+        begin
+            cont.call
+        ensure
+            # Ensure something important happens here
+        end
+    end
+    ```
+* Compatible with Ruby 4.0
+
 ### v1.1.0.pre
 * Updated dependancies
 * Now compatible with (and requires) Rack 3.x

@@ -10,6 +10,7 @@ module Scorched
     include Scorched::Options('symbol_matchers')
     include Scorched::Collection('middleware')
     include Scorched::Collection('before_filters')
+    include Scorched::Collection('around_filters')
     include Scorched::Collection('after_filters', true)
     include Scorched::Collection('error_filters')
 
@@ -108,7 +109,7 @@ module Scorched
       end
 
       def filters
-        @filters ||= {before: before_filters, after: after_filters, error: error_filters}
+        @filters ||= {before: before_filters, around: around_filters, after: after_filters, error: error_filters}
       end
 
       def call(env)
@@ -213,6 +214,16 @@ module Scorched
         filter(:after, force: force, conditions: conditions, &block)
       end
 
+      # Syntactic sugar for defining an around filter.
+      # The block is passed a single argument - a proc representing the rest of the filter chain (including the
+      # eventual dispatch to before/matching/after processing). The block must call it (e.g. `cont.call`) for
+      # request handling to proceed; if it doesn't, the wrapped chain simply never runs.
+      # Around filters defined earlier (including those defined in superclasses) wrap those defined later, with the
+      # innermost proc being the actual before/dispatch/after cycle.
+      def around(**conditions, &block)
+        filter(:around, conditions: conditions, &block)
+      end
+
       # Syntactic sugar for defining an error filter.
       # Takes one or more optional exception classes for which this error filter should handle. Handles all exceptions
       # by default.
@@ -286,26 +297,29 @@ module Scorched
         end
       end
 
-      begin
-        if config[:strip_trailing_slash] == :redirect && request.path =~ %r{[^/]/+$}
-          query_string = request.query_string.empty? ? '' : '?' << request.query_string
-          redirect(request.path.chomp('/') + query_string, status: 307, halt: false)
-          return response.finish
-        end
-        pass if config[:auto_pass] && eligable_matches.empty?
+      if config[:strip_trailing_slash] == :redirect && request.path =~ %r{[^/]/+$}
+        query_string = request.query_string.empty? ? '' : '?' << request.query_string
+        redirect(request.path.chomp('/') + query_string, status: 307, halt: false)
+        return response.finish
+      end
 
-        if run_filters(:before)
-          catch(:halt) {
-            begin
-              try_matches
-            rescue => inner_error
-              rescue_block.call(inner_error)
-            end
-          }
+      run_around_filters do
+        begin
+          pass if config[:auto_pass] && eligable_matches.empty?
+
+          if run_ba_filters(:before)
+            catch(:halt) {
+              begin
+                try_matches
+              rescue => inner_error
+                rescue_block.call(inner_error)
+              end
+            }
+          end
+          run_ba_filters(:after)
+        rescue => outer_error
+          outer_error == inner_error ? raise : catch(:halt) { rescue_block.call(outer_error) }
         end
-        run_filters(:after)
-      rescue => outer_error
-        outer_error == inner_error ? raise : catch(:halt) { rescue_block.call(outer_error) }
       end
       response.finish
     end
@@ -328,6 +342,9 @@ module Scorched
     # Overriding this method provides the opportunity for one to have more control over how mapping targets are invoked.
     def dispatch(match)
       @_dispatched = true
+      if String === match.mapping[:target] || Symbol === match.mapping[:target]
+        match.mapping[:target] = Object.const_get(match.mapping[:target]) # Resolve symbol to constant, and replace target to avoid future lookups
+      end
       target = match.mapping[:target]
       response.merge! begin
         if Proc === target
@@ -595,21 +612,48 @@ module Scorched
 
   private
 
-    # Returns false if any of the filters halted the request. True otherwise.
-    def run_filters(type)
+    # Wraps the given block with the chain of around filters, outermost first, and calls it. Each filter is passed
+    # a proc representing the rest of the chain (the next around filter, or the wrapped block if there are no more),
+    # and is responsible for calling it to continue processing the request.
+    # As with before/after filters, a filter inherited by both an outer and inner controller (e.g. via `controller`
+    # sub-mapping) only runs once per request, tracked via the shared `env`.
+    def run_around_filters(&core)
+      tracker = filter_tracker(:around)
+      chain = filters[:around].to_a.reverse.reduce(core) do |inner, f|
+        proc do
+          if tracker.include?(f) || check_for_failed_condition(f[:conditions])
+            inner.call
+          else
+            tracker << f
+            instance_exec(inner, &f[:proc])
+          end
+        end
+      end
+      catch(:halt) { chain.call }
+    end
+
+    # Returns false if any of the before/after filters halted the request. True otherwise.
+    def run_ba_filters(type)
       halted = false
-      tracker = env['scorched.executed_filters'] ||= {before: Set.new, after: Set.new}
-      filters[type].reject { |f| tracker[type].include?(f) }.each do |f|
+      tracker = filter_tracker(type)
+      filters[type].reject { |f| tracker.include?(f) }.each do |f|
         unless check_for_failed_condition(f[:conditions]) || (halted && !f[:force])
-          tracker[type] << f
-          halted = true unless run_filter(f)
+          tracker << f
+          halted = true unless run_ba_filter(f)
         end
       end
       !halted
     end
 
-    # Returns false if the filter halted. True otherwise.
-    def run_filter(f)
+    # Returns the set of filters of the given type that have already executed for this request, tracked in `env` so
+    # an inherited filter isn't run twice across nested controller dispatches.
+    def filter_tracker(type)
+      tracker = env['scorched.executed_filters'] ||= {}
+      tracker[type] ||= Set.new
+    end
+
+    # Returns false if the before/after filter halted. True otherwise.
+    def run_ba_filter(f)
       catch(:halt) do
         instance_exec(&f[:proc])
         return true

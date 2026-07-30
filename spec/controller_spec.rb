@@ -421,7 +421,7 @@ module Scorched
       end
     end
 
-    describe "before/after filters" do
+    describe "before/after/around filters" do
       they "run directly before and after the target action" do
         order = []
         app.get('/') { order << :action }
@@ -536,6 +536,101 @@ module Scorched
           end
           rt.get('/hello')
           order.should == %i{first second third}
+        end
+      end
+    end
+
+    describe "after filters" do
+      they "wrap around the before/action/after cycle, outermost first" do
+        order = []
+        app.around { |cont| order << :first_before; cont.call; order << :first_after }
+        app.around { |cont| order << :second_before; cont.call; order << :second_after }
+        app.before { order << :before }
+        app.after { order << :after }
+        app.get('/') { order << :action }
+        rt.get('/')
+        order.should == %i{first_before second_before before action after second_after first_after}
+      end
+
+      they "run in the context of the controller (same as the route)" do
+        route_instance = nil
+        around_instance = nil
+        app.get('/') { route_instance = self }
+        app.around { |cont| around_instance = self; cont.call }
+        rt.get('/')
+        route_instance.should == around_instance
+      end
+
+      they "run even if no route matches" do
+        counter = 0
+        app.around { |cont| counter += 1; cont.call }
+        rt.delete('/').status.should == 404
+        counter.should == 1
+      end
+
+      they "can take an optional set of conditions" do
+        counter = 0
+        app.around(method: ['GET', 'PUT']) { |cont| counter += 1; cont.call }
+        app.get('/') { }
+        app.put('/') { }
+        rt.post('/')
+        rt.get('/')
+        rt.put('/')
+        counter.should == 2
+      end
+
+      they "skip the target action, and everything else in the chain, if the continuation is never called" do
+        action_called = false
+        app.before { }
+        app.around { |cont| }
+        app.get('/') { action_called = true }
+        rt.get('/').status.should == 200
+        action_called.should == false
+      end
+
+      they "still unwind (run code after the continuation) even if the action halts" do
+        order = []
+        app.around { |cont| order << :before; cont.call; order << :after }
+        app.get('/') { order << :action; halt 200, 'stopped' }
+        response = rt.get('/')
+        response.body.should == 'stopped'
+        order.should == %i{before action after}
+      end
+
+      they "still unwind even if the action raises, once the error is handled" do
+        order = []
+        app.around { |cont| order << :before; cont.call; order << :after }
+        app.get('/') { raise 'boom' }
+        app.error { |e| order << :error; halt 500 }
+        rt.get('/').status.should == 500
+        order.should == %i{before error after}
+      end
+      
+      describe "nesting" do
+        example "around filters inherit but only run once" do
+          around_counter = 0
+          app.around { |cont| around_counter += 1; cont.call }
+          subcontroller = app.controller { get('/') { 'wow' } }
+          subcontroller.filters[:around].should == app.filters[:around]
+
+          rt.get('/')
+          around_counter.should == 1
+
+          # Hitting the subcontroller directly should yield the same results.
+          around_counter = 0
+          Rack::Test::Session.new(subcontroller).get('/')
+          around_counter.should == 1
+        end
+
+        example "around filters wrap from outermost to innermost" do
+          order = []
+          app.around { |cont| order << :outer_before; cont.call; order << :outer_after }
+          app.controller do
+            around { |cont| order << :inner_before; cont.call; order << :inner_after }
+            get('/') { order << :action }
+          end
+          rt.get('/')
+          order.should == %i{outer_before inner_before action inner_after outer_after}
         end
       end
     end
