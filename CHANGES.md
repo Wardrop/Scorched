@@ -1,6 +1,8 @@
 Changelog
 =========
 
+### v1.1.1
+* Fixed frozen string mutation in `absolute` method.
 ### v1.1.0
 * Added `around` filters to allow wrapping application logic around a request. `around` filters wrap around `before/after` filters. Ideal for `begin...ensure...end` where you need to ensure something happens before the request processing ends. For example:
     ```

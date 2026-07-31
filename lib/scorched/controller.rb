@@ -573,9 +573,10 @@ module Scorched
       else
         env['scorched.root_path']
       end
-      abs.insert(0, '/') unless abs[0] == '/'
+      abs = "/#{abs}" unless abs[0] == '/'
       abs
     end
+    
 
     # We always want this filter to run at the end-point controller, hence we include the conditions within the body of
     # the filter.
